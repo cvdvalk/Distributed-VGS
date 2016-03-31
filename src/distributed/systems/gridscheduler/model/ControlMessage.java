@@ -24,6 +24,7 @@ public class ControlMessage implements Serializable{
 	private String url;
 	private Job job;
 	private int load;
+	private int max;
 
 	/**
 	 * Constructs a new ControlMessage object
@@ -85,6 +86,14 @@ public class ControlMessage implements Serializable{
 	 */
 	public ControlMessageType getType() {
 		return type;
+	}
+	
+	public void setMax(int max){
+		this.max = max;
+	}
+	
+	public int getMax(){
+		return max;
 	}
 
 

@@ -6,6 +6,6 @@ import java.rmi.RemoteException;
 
 public interface ResourceManagerInterface extends Remote{
 	
-	public void onMessageReceived(ControlMessage message) throws RemoteException, NotBoundException;
+	public void onMessageReceived(ControlMessage message) throws RemoteException, NotBoundException, InterruptedException;
 
 }

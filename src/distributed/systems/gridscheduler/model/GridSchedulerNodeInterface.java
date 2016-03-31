@@ -5,5 +5,5 @@ import java.rmi.RemoteException;
 
 public interface GridSchedulerNodeInterface extends Remote{
 
-	public void onMessageReceived(ControlMessage message) throws RemoteException;
+	public void onMessageReceived(ControlMessage message) throws RemoteException, InterruptedException;
 }

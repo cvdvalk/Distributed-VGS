@@ -42,8 +42,9 @@ public class Cluster implements Runnable {
 	 * @throws RemoteException 
 	 * @throws NotBoundException 
 	 * @throws AlreadyBoundException 
+	 * @throws InterruptedException 
 	 */
-	public Cluster(String name, String gridSchedulerURL, int nodeCount) throws RemoteException, NotBoundException, AlreadyBoundException {
+	public Cluster(String name, String gridSchedulerURL, int nodeCount) throws RemoteException, NotBoundException, AlreadyBoundException, InterruptedException {
 		// Preconditions
 		assert(name != null) : "parameter 'name' cannot be null";
 		assert(gridSchedulerURL != null) : "parameter 'gridSchedulerURL' cannot be null";
@@ -120,9 +121,11 @@ public class Cluster implements Runnable {
 	 */
 	public Node getFreeNode() {
 		// Find a free node among the nodes in our cluster
-	    for (Node node : nodes)
-			if (node.getStatus() == NodeStatus.Idle) return node;
-		
+	    for (Node node : nodes){
+			if (node.getStatus() == NodeStatus.Idle) {
+				return node;
+			}
+	    }
 		// if we haven't returned from the function here, we haven't found a suitable node
 		// so we just return null
 		return null;

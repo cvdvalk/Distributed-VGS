@@ -5,6 +5,9 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -23,13 +26,14 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 	
 	// local url
 	private final String url;
+	private List<String> gridScheduler;
 
 	// communications socket
 //	private Socket socket;
 	
 	// a hashmap linking each resource manager to an estimated load
 	private ConcurrentHashMap<String, Integer> resourceManagerLoad;
-
+	private ConcurrentHashMap<String, Integer> resourceManagerLoadMax;
 	// polling frequency, 1hz
 	private long pollSleep = 1000;
 	
@@ -53,8 +57,9 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 		// init members
 		this.url = url;
 		this.resourceManagerLoad = new ConcurrentHashMap<String, Integer>();
+		this.resourceManagerLoadMax = new ConcurrentHashMap<String, Integer>();
 		this.jobQueue = new ConcurrentLinkedQueue<Job>();
-		
+		this.gridScheduler = new ArrayList<String>();
 //		// create a messaging socket
 //		LocalSocket lSocket = new LocalSocket();
 //		socket = new SynchronizedSocket(lSocket);
@@ -99,8 +104,9 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 	 * <DD>parameter <CODE>message</CODE> should not be null
 	 * </DL> 
 	 * @param message a message
+	 * @throws InterruptedException 
 	 */
-	public void onMessageReceived(ControlMessage message) {
+	public void onMessageReceived(ControlMessage message) throws InterruptedException {
 		// preconditions
 		assert(message instanceof ControlMessage) : "parameter 'message' should be of type ControlMessage";
 		assert(message != null) : "parameter 'message' cannot be null";
@@ -111,20 +117,50 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 		// when a new RM is added, its load is set to Integer.MAX_VALUE to make sure
 		// no jobs are scheduled to it until we know the actual load
 		if (controlMessage.getType() == ControlMessageType.ResourceManagerJoin){
-			System.out.println("received resourcemanagerjoin msg");
+//			System.out.println(url + ": received resourcemanagerjoin msg");
 			resourceManagerLoad.put(controlMessage.getUrl(), Integer.MAX_VALUE);
+			resourceManagerLoadMax.put(controlMessage.getUrl(), controlMessage.getMax());
+		}
+		if (controlMessage.getType() == ControlMessageType.GridSchedulerNodeJoin){
+//			System.out.println(url + ": received gridschedulerjoin msg");
+			gridScheduler.add(controlMessage.getUrl());
 		}
 		// resource manager wants to offload a job to us 
 		if (controlMessage.getType() == ControlMessageType.AddJob){
-			System.out.println("received addjob msg");
-			jobQueue.add(controlMessage.getJob());
+//			System.out.println(url + ": received addjob msg");
+			if(!hasJob(controlMessage.getJob())){
+				controlMessage.getJob().addToLog(url);
+				controlMessage.getJob().setLast(url);
+				jobQueue.add(controlMessage.getJob());
+				
+				//TODO: broadcast job added, msg type job arrival or addjob
+				
+			}
+			
+			
 		}
-		// resource manager wants to offload a job to us 
+		// 
 		if (controlMessage.getType() == ControlMessageType.ReplyLoad){
-			System.out.println("received replyload msg");
+//			System.out.println(url + ": received replyload msg");
 			resourceManagerLoad.put(controlMessage.getUrl(),controlMessage.getLoad());
 		}
-		
+		// 
+		if (controlMessage.getType() == ControlMessageType.NodeStart){
+//			System.out.println(url + ": received nodestart msg");
+		}
+		//
+		else if (controlMessage.getType() == ControlMessageType.RemoveJob){
+//			System.out.println(url + ": received removejob msg " + controlMessage.getJob().getId() + " " + controlMessage.getUrl());
+			Iterator<Job> iter = jobQueue.iterator();
+			while (iter.hasNext()) {
+			    Job current = iter.next();
+			    // do something with current
+			    if(current.getId() == controlMessage.getJob().getId()){
+			    	jobQueue.remove(current);
+			    	break;
+			    }
+			}
+		}
 	}
 
 	// finds the least loaded resource manager and returns its url
@@ -135,7 +171,7 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 		// loop over all resource managers, and pick the one with the lowest load
 		for (String key : resourceManagerLoad.keySet())
 		{
-			if (resourceManagerLoad.get(key) <= minLoad)
+			if (resourceManagerLoad.get(key) <= minLoad &&  resourceManagerLoad.get(key) < resourceManagerLoadMax.get(key))
 			{
 				ret = key;
 				minLoad = resourceManagerLoad.get(key);
@@ -156,16 +192,16 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 			{
 				ControlMessage cMessage = new ControlMessage(ControlMessageType.RequestLoad);
 				cMessage.setUrl(this.getUrl());
-//				socket.sendMessage(cMessage, "localsocket://" + rmUrl);
 				Registry registry;
 				try {
 					registry = LocateRegistry.getRegistry();
 					ResourceManagerInterface temp = (ResourceManagerInterface) registry.lookup(rmUrl);
 					temp.onMessageReceived(cMessage);
 				} catch (RemoteException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				} catch (NotBoundException e) {
+					e.printStackTrace();
+				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
@@ -175,22 +211,47 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 			// schedule waiting messages to the different clusters
 			for (Job job : jobQueue)
 			{
+				//Job job = jobQueue.poll();
 				String leastLoadedRM =  getLeastLoadedRM();
-				
+//				System.out.println(leastLoadedRM!=null);
 				if (leastLoadedRM!=null) {
-				
-					ControlMessage cMessage = new ControlMessage(ControlMessageType.AddJob);
-					cMessage.setJob(job);
-//					socket.sendMessage(cMessage, "localsocket://" + leastLoadedRM);
+					
 					Registry registry;
 					try {
 						registry = LocateRegistry.getRegistry();
-						ResourceManagerInterface temp = (ResourceManagerInterface) registry.lookup(leastLoadedRM);
-					temp.onMessageReceived(cMessage);
+						for(String node: gridScheduler){
+							ControlMessage cMessage = new ControlMessage(ControlMessageType.RemoveJob);
+							cMessage.setJob(job);
+							cMessage.setUrl(url);
+							GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(node);
+							temp.onMessageReceived(cMessage);
+						}
+						
+						
 					} catch (RemoteException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					} catch (NotBoundException e) {
+						e.printStackTrace();
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				
+					ControlMessage cMessage = new ControlMessage(ControlMessageType.AddJob);
+					cMessage.setJob(job);
+					
+					//TODO: broadcast other gsn to remove job
+					try {
+						registry = LocateRegistry.getRegistry();
+						ResourceManagerInterface temp = (ResourceManagerInterface) registry.lookup(leastLoadedRM);
+						temp.onMessageReceived(cMessage);
+						
+						
+					} catch (RemoteException e) {
+						e.printStackTrace();
+					} catch (NotBoundException e) {
+						e.printStackTrace();
+					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
@@ -198,13 +259,65 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 					
 					jobQueue.remove(job);
 					
+					
 					// increase the estimated load of that RM by 1 (because we just added a job)
 					int load = resourceManagerLoad.get(leastLoadedRM);
 					resourceManagerLoad.put(leastLoadedRM, load+1);
 					
 				}
+				else{
+//					System.out.println("prison overcrowded");
+//					System.out.println("REDEKJLHBADPIHFOIAHGSFOIHBFOIKHBASFD");
+					Registry registry;
+					try {
+						registry = LocateRegistry.getRegistry();
+						for(String node: gridScheduler){
+							
+							ControlMessage cMessage = new ControlMessage(ControlMessageType.AddJob);
+							cMessage.setJob(job);
+							
+							GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(node);
+							temp.onMessageReceived(cMessage);
+						}
+						
+					} catch (RemoteException e) {
+						e.printStackTrace();
+					} catch (NotBoundException e) {
+						e.printStackTrace();
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+				
 				
 			}
+			
+//			if (jobQueue.size()> 0) {
+//				for(Job job : jobQueue){
+//					System.out.println("REDEKJLHBADPIHFOIAHGSFOIHBFOIKHBASFD");
+//					Registry registry;
+//					try {
+//						registry = LocateRegistry.getRegistry();
+//						for(String node: gridScheduler){
+//							
+//							ControlMessage cMessage = new ControlMessage(ControlMessageType.AddJob);
+//							cMessage.setJob(job);
+//							
+//							GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(node);
+//							temp.onMessageReceived(cMessage);
+//						}
+//						
+//					} catch (RemoteException e) {
+//						e.printStackTrace();
+//					} catch (NotBoundException e) {
+//						e.printStackTrace();
+//					} catch (InterruptedException e) {
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
+//				}
+//			}
 			
 			// sleep
 			try
@@ -231,6 +344,46 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 			assert(false) : "Grid scheduler stopPollThread was interrupted";
 		}
 		
+	}
+	
+	public void broadcastNodeStart(){
+		//send nodestart message
+	}
+	
+	public void NodeCrash() throws InterruptedException{
+		//crash node, clear most data, sleep, restart, send restart msg
+		running = false;
+		Thread.sleep(5000);
+		//for each gsn, send msg
+		//they send addjob messages?
+		running = true;
+	}
+	
+	public void connectToGridScheduler(String gridSchedulerURL) throws RemoteException, NotBoundException, InterruptedException {
+
+		// preconditions
+		assert(gridSchedulerURL != null) : "the parameter 'gridSchedulerURL' cannot be null"; 
+
+		gridScheduler.add(gridSchedulerURL);
+
+		ControlMessage message = new ControlMessage(ControlMessageType.GridSchedulerNodeJoin);
+		message.setUrl(url);
+		
+		Registry registry = LocateRegistry.getRegistry();
+		GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
+		temp.onMessageReceived(message);
+
+	}
+	
+	public boolean hasJob(Job job){
+		Iterator<Job> iter = jobQueue.iterator();
+		while(iter.hasNext()){
+			Job current = iter.next();
+			if(current.getId() == job.getId()){
+				return true;
+			}
+		}
+		return false;
 	}
 	
 }

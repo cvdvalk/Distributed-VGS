@@ -31,6 +31,7 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 	private String socketURL;
 	private int jobQueueSize;
 	public static final int MAX_QUEUE_SIZE = 32; 
+	private String completed;
 
 	// Scheduler url
 	private String gridSchedulerURL = null;
@@ -53,7 +54,7 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 
 		this.cluster = cluster;
 		this.socketURL = cluster.getName();
-
+		completed = "";
 		// Number of jobs in the queue must be larger than the number of nodes, because
 		// jobs are kept in queue until finished. The queue is a bit larger than the 
 		// number of nodes for efficiency reasons - when there are only a few more jobs than
@@ -75,18 +76,22 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 	 * @param job the Job to run
 	 * @throws RemoteException 
 	 * @throws NotBoundException 
+	 * @throws InterruptedException 
 	 */
-	public void addJob(Job job) throws RemoteException, NotBoundException {
+	public void addJob(Job job) throws RemoteException, NotBoundException, InterruptedException {
 		// check preconditions
 		assert(job != null) : "the parameter 'job' cannot be null";
 		assert(gridSchedulerURL != null) : "No grid scheduler URL has been set for this resource manager";
-
+		job.setLog(socketURL);
+		job.setLast(socketURL);
+		//TODO: msg job arrival to gsn?
+		
 		// if the jobqueue is full, offload the job to the grid scheduler
 		if (jobQueue.size() >= jobQueueSize) {
 
 			ControlMessage controlMessage = new ControlMessage(ControlMessageType.AddJob);
 			controlMessage.setJob(job);
-//			socket.sendMessage(controlMessage, "localsocket://" + gridSchedulerURL);
+
 			Registry registry = LocateRegistry.getRegistry();
 			GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
 			temp.onMessageReceived(controlMessage);
@@ -105,10 +110,11 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 	 */
 	public Job getWaitingJob() {
 		// find a waiting job
-		for (Job job : jobQueue) 
-			if (job.getStatus() == JobStatus.Waiting) 
+		for (Job job : jobQueue) {
+			if (job.getStatus() == JobStatus.Waiting){
 				return job;
-
+			}
+		}
 		// no waiting jobs found, return null
 		return null;
 	}
@@ -121,9 +127,10 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		// free nodes
 		Node freeNode;
 		Job waitingJob;
-
+		
 		while ( ((waitingJob = getWaitingJob()) != null) && ((freeNode = cluster.getFreeNode()) != null) ) {
 			freeNode.startJob(waitingJob);
+			//TODO: send msg to GSN jobstarted
 		}
 
 	}
@@ -136,9 +143,12 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 	public void jobDone(Job job) {
 		// preconditions
 		assert(job != null) : "parameter 'job' cannot be null";
-
+		System.out.println(job.toString());
 		// job finished, remove it from our pool
 		jobQueue.remove(job);
+		completed += job.toString();
+		System.out.println(socketURL + ": load: "+jobQueue.size());
+		//TODO: send msg to GSN jobdone
 	}
 
 	/**
@@ -155,8 +165,9 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 	 * @param gridSchedulerURL
 	 * @throws RemoteException 
 	 * @throws NotBoundException 
+	 * @throws InterruptedException 
 	 */
-	public void connectToGridScheduler(String gridSchedulerURL) throws RemoteException, NotBoundException {
+	public void connectToGridScheduler(String gridSchedulerURL) throws RemoteException, NotBoundException, InterruptedException {
 
 		// preconditions
 		assert(gridSchedulerURL != null) : "the parameter 'gridSchedulerURL' cannot be null"; 
@@ -165,6 +176,8 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 
 		ControlMessage message = new ControlMessage(ControlMessageType.ResourceManagerJoin);
 		message.setUrl(socketURL);
+		message.setMax(jobQueueSize);
+//		message.setMax(cluster.getNodeCount());
 		
 		Registry registry = LocateRegistry.getRegistry();
 		GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
@@ -181,8 +194,9 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 	 * @param message a message
 	 * @throws RemoteException 
 	 * @throws NotBoundException 
+	 * @throws InterruptedException 
 	 */
-	public void onMessageReceived(ControlMessage message) throws RemoteException, NotBoundException {
+	public void onMessageReceived(ControlMessage message) throws RemoteException, NotBoundException, InterruptedException {
 		// preconditions
 		assert(message instanceof ControlMessage) : "parameter 'message' should be of type ControlMessage";
 		assert(message != null) : "parameter 'message' cannot be null";
@@ -192,23 +206,27 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		// resource manager wants to offload a job to us 
 		if (controlMessage.getType() == ControlMessageType.AddJob)
 		{
-			System.out.println("Received addjob msg");
+			//TODO: msg Job arrival
+//			System.out.println(socketURL + ": Received addjob msg");
+			controlMessage.getJob().addToLog(socketURL);
 			jobQueue.add(controlMessage.getJob());
 			scheduleJobs();
 		}
 
-		// resource manager wants to offload a job to us 
+		// 
 		if (controlMessage.getType() == ControlMessageType.RequestLoad)
 		{
-			System.out.println("received requestload msg");
+//			System.out.println(socketURL + ": received requestload msg");
+//			scheduleJobs();
 			ControlMessage replyMessage = new ControlMessage(ControlMessageType.ReplyLoad);
 			replyMessage.setUrl(cluster.getName());
 			replyMessage.setLoad(jobQueue.size());
-			
+//			if(jobQueue.size() == 0){
+//				System.out.println(completed);
+//			}
 			Registry registry = LocateRegistry.getRegistry();
 			GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
-			temp.onMessageReceived(message);
-//			socket.sendMessage(replyMessage, "localsocket://" + controlMessage.getUrl());				
+			temp.onMessageReceived(replyMessage);
 		}
 
 	}

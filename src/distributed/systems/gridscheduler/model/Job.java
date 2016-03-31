@@ -1,15 +1,19 @@
 package distributed.systems.gridscheduler.model;
 
+import java.io.Serializable;
+
 /**
  * This class represents a job that can be executed on a grid. 
  * 
  * @author Niels Brouwers
  *
  */
-public class Job {
+public class Job  implements Serializable{
 	private long duration;
 	private JobStatus status;
 	private long id;
+	private String log;
+	private String last;
 
 	/**
 	 * Constructs a new Job object with a certain duration and id. The id has to be unique
@@ -29,6 +33,8 @@ public class Job {
 		this.duration = duration;
 		this.status = JobStatus.Waiting;
 		this.id = id; 
+		log = "";
+		last = "";
 	}
 
 	/**
@@ -67,7 +73,27 @@ public class Job {
 	 * @return a string representation of this job object
 	 */
 	public String toString() {
-		return "Job {ID = " + id + "}";
+		return "Job {ID = " + id + ", " + log + "}";
+	}
+	
+	public void addToLog(String clusterOrNode){
+		log += ", "+clusterOrNode;
+	}
+	
+	public String getLog(){
+		return log;
+	}
+	
+	public void setLog(String log){
+		this.log = log;
+	}
+	
+	public void setLast(String last){
+		this.last = last;
+	}
+	
+	public String getLast(){
+		return last;
 	}
 
 }

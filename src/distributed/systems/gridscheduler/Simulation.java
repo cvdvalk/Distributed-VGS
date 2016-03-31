@@ -102,8 +102,9 @@ public class Simulation implements Runnable {
 	 * @throws NotBoundException 
 	 * @throws RemoteException 
 	 * @throws AlreadyBoundException 
+	 * @throws InterruptedException 
 	 */
-	public static void main(String[] args) throws RemoteException, NotBoundException, AlreadyBoundException {
+	public static void main(String[] args) throws RemoteException, NotBoundException, AlreadyBoundException, InterruptedException {
 		// Create and run the simulation
 //		new Simulation();
 		try {
@@ -112,15 +113,50 @@ public class Simulation implements Runnable {
 			e.printStackTrace();
 		}
 		GridSchedulerNode node1 = new GridSchedulerNode("Node1");
+		GridSchedulerNode node2 = new GridSchedulerNode("Node2");
 		 // Bind the remote object's stub in the registry
 	    Registry registry = LocateRegistry.getRegistry();
 	    
 		registry.bind("Node1", node1);
+		registry.bind("Node2", node2);
 		//Thread t = new Thread(node1);
 		
-		Cluster cluster1 = new Cluster("cluster1", "Node1", 50);
-		Job job = new Job(8000 + (int)(Math.random() * 5000), 1);
-		cluster1.getResourceManager().addJob(job);
+		node1.connectToGridScheduler("Node2");
+		
+		Cluster cluster1 = new Cluster("cluster1", "Node1", 32);
+		Cluster cluster4 = new Cluster("cluster4", "Node1", 64);
+		Cluster cluster2 = new Cluster("cluster2", "Node2", 32);
+		Cluster cluster3 = new Cluster("cluster3", "Node2", 32);
+		int xtrajobs = 0;
+		for(int i = 0;i < 300;i++){
+			Job job = new Job(8000 + (int)(Math.random() * 5000), i);
+			cluster1.getResourceManager().addJob(job);
+			if(i % 2 == 0){
+				xtrajobs++;
+				Job job2 = new Job(8000 + (int)(Math.random() * 5000), 300+xtrajobs);
+				cluster3.getResourceManager().addJob(job2);
+				
+			}
+			if(i % 3 == 0){
+				xtrajobs++;
+				Job job3 = new Job(8000 + (int)(Math.random() * 5000), 300+xtrajobs);
+				cluster2.getResourceManager().addJob(job3);
+				
+			}
+			if(i % 4 == 0){
+				xtrajobs++;
+				Job job4 = new Job(8000 + (int)(Math.random() * 5000), 300+xtrajobs);
+				cluster4.getResourceManager().addJob(job4);
+				
+			}
+			try {
+				// Sleep a while before creating a new job
+				Thread.sleep(100L);
+			} catch (InterruptedException e) {
+				assert(false) : "Simulation runtread was interrupted";
+			}
+		}
+		System.out.println(xtrajobs);
 		//t.start();
 		
 	}

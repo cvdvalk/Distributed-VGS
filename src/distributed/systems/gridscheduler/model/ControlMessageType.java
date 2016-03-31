@@ -11,12 +11,20 @@ public enum ControlMessageType {
 
 	// from RM to GS
 	ResourceManagerJoin,
+	GridSchedulerNodeJoin,
 	ReplyLoad,
 
 	// from GS to RM
 	RequestLoad,
 
 	// both ways
-	AddJob
-
+	AddJob,
+	
+	//from GSN to GSN
+	JobArrival, 		// from RM to GS, and GS to GS?
+	JobStart,			// from RM to GS
+	JobCompletion,		// from RM to GS
+	NodeStart,			//from GSN to GSN
+	NodeStartReply, 	//from GSN to GSN
+	RemoveJob
 }
