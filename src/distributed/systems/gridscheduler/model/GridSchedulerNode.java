@@ -172,6 +172,7 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 		for (String key : resourceManagerLoad.keySet())
 		{
 			if (resourceManagerLoad.get(key) <= minLoad &&  resourceManagerLoad.get(key) < resourceManagerLoadMax.get(key))
+//			if (resourceManagerLoad.get(key) <= minLoad &&  resourceManagerLoad.get(key) < 64)
 			{
 				ret = key;
 				minLoad = resourceManagerLoad.get(key);
@@ -278,6 +279,8 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 							
 							GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(node);
 							temp.onMessageReceived(cMessage);
+							
+							jobQueue.remove(job);
 						}
 						
 					} catch (RemoteException e) {
@@ -366,12 +369,12 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 
 		gridScheduler.add(gridSchedulerURL);
 
-		ControlMessage message = new ControlMessage(ControlMessageType.GridSchedulerNodeJoin);
-		message.setUrl(url);
-		
-		Registry registry = LocateRegistry.getRegistry();
-		GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
-		temp.onMessageReceived(message);
+//		ControlMessage message = new ControlMessage(ControlMessageType.GridSchedulerNodeJoin);
+//		message.setUrl(url);
+//		
+//		Registry registry = LocateRegistry.getRegistry();
+//		GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
+//		temp.onMessageReceived(message);
 
 	}
 	

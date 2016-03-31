@@ -147,7 +147,7 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		// job finished, remove it from our pool
 		jobQueue.remove(job);
 		completed += job.toString();
-		System.out.println(socketURL + ": load: "+jobQueue.size());
+//		System.out.println(socketURL + ": load: "+jobQueue.size());
 		//TODO: send msg to GSN jobdone
 	}
 
