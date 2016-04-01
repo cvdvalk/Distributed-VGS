@@ -7,6 +7,8 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 /**
@@ -33,6 +35,8 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 	public static final int MAX_QUEUE_SIZE = 32; 
 	private String completed;
 	private int load;
+	private AtomicLong time;
+	private AtomicInteger pirate;
 
 	// Scheduler url
 	private String gridSchedulerURL = null;
@@ -57,12 +61,13 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		this.socketURL = cluster.getName();
 		completed = "";
 		load = 0;
+		time = new AtomicLong(0);
 		// Number of jobs in the queue must be larger than the number of nodes, because
 		// jobs are kept in queue until finished. The queue is a bit larger than the 
 		// number of nodes for efficiency reasons - when there are only a few more jobs than
 		// nodes we can assume a node will become available soon to handle that job.
 		jobQueueSize = cluster.getNodeCount() + MAX_QUEUE_SIZE;
-
+		pirate = new AtomicInteger(0);
 	}
 
 	/**
@@ -86,6 +91,7 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		assert(gridSchedulerURL != null) : "No grid scheduler URL has been set for this resource manager";
 		job.setLog(socketURL);
 		job.setLast(socketURL);
+		job.setTimeArrived();
 		// if the jobqueue is full, offload the job to the grid scheduler
 		if (jobQueue.size() >= jobQueueSize) {
 
@@ -142,10 +148,35 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 	public void jobDone(Job job) {
 		// preconditions
 		assert(job != null) : "parameter 'job' cannot be null";
+		job.setTimeCompleted();
 		System.out.println(job.toString());
+		
+		time.addAndGet( (long) (job.getTimeCompleted().getTime() - job.getTimeArrived().getTime() - job.getDuration()) );
 		// job finished, remove it from our pool
 		jobQueue.remove(job);
 		completed += job.toString();
+		pirate.addAndGet(1);
+		
+		ControlMessage message = new ControlMessage(ControlMessageType.JobCompletion);
+		message.setUrl(socketURL);
+		
+		
+		Registry registry;
+		try {
+			registry = LocateRegistry.getRegistry();
+			GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
+			temp.onMessageReceived(message);
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NotBoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 	}
 
 	/**
@@ -204,7 +235,6 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 			jobQueue.add(controlMessage.getJob());
 			scheduleJobs();
 		}
-
 		// 
 		if (controlMessage.getType() == ControlMessageType.RequestLoad)
 		{
@@ -215,8 +245,20 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 			Registry registry = LocateRegistry.getRegistry();
 			GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
 			temp.onMessageReceived(replyMessage);
+			
+			System.out.println(toString());
 		}
-
+	}
+	
+	public int getLoad(){
+		return jobQueue.size();
+	}
+	
+	public String toString(){
+		if(pirate.get() > 0 && time.get() > 0){
+			return socketURL + ": " + " - " + pirate.get() + " - " + (time.get() / pirate.get());
+		}
+		return "";
 	}
 
 }

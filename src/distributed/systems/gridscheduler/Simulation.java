@@ -99,7 +99,7 @@ public class Simulation implements Runnable {
 		clusters.add(cluster17);clusters.add(cluster18);
 		
 		int xtrajobs = 0;
-		int jobsNumber = 1000;
+		int jobsNumber = 500;
 		for(int i = 0;i < jobsNumber;i++){
 			Job job = new Job(8000 + (int)(Math.random() * 5000), i);
 			cluster1.getResourceManager().addJob(job);
@@ -125,13 +125,55 @@ public class Simulation implements Runnable {
 //				cluster4.getResourceManager().addJob(job4);
 //				
 //			}
+			if(i % 5 == 0){
+				for(Cluster c : clusters){
+					xtrajobs++;
+					Job job_temp = new Job(8000 + (int)(Math.random() * 5000), jobsNumber+xtrajobs);
+					c.getResourceManager().addJob(job_temp);
+				}
+			}
 //			if(i % 5 == 0){
-//				for(Cluster c : clusters){
-//					xtrajobs++;
-//					Job job_temp = new Job(8000 + (int)(Math.random() * 5000), jobsNumber+xtrajobs);
-//					c.getResourceManager().addJob(job_temp);
-//				}
+//				xtrajobs++;
+//				Job job_temp = new Job(8000 + (int)(Math.random() * 5000), jobsNumber+xtrajobs);
+//				cluster1.getResourceManager().addJob(job_temp);
+//				
+//				xtrajobs++;
+//				job_temp = new Job(8000 + (int)(Math.random() * 5000), jobsNumber+xtrajobs);
+//				cluster2.getResourceManager().addJob(job_temp);
+//				
+//				xtrajobs++;
+//				job_temp = new Job(8000 + (int)(Math.random() * 5000), jobsNumber+xtrajobs);
+//				cluster5.getResourceManager().addJob(job_temp);
+//				
+//				xtrajobs++;
+//				job_temp = new Job(8000 + (int)(Math.random() * 5000), jobsNumber+xtrajobs);
+//				cluster6.getResourceManager().addJob(job_temp);
+//				
+//				xtrajobs++;
+//				job_temp = new Job(8000 + (int)(Math.random() * 5000), jobsNumber+xtrajobs);
+//				cluster9.getResourceManager().addJob(job_temp);
+//				
+//				xtrajobs++;
+//				job_temp = new Job(8000 + (int)(Math.random() * 5000), jobsNumber+xtrajobs);
+//				cluster10.getResourceManager().addJob(job_temp);
+//				
+//				xtrajobs++;
+//				job_temp = new Job(8000 + (int)(Math.random() * 5000), jobsNumber+xtrajobs);
+//				cluster13.getResourceManager().addJob(job_temp);
+//				
+//				xtrajobs++;
+//				job_temp = new Job(8000 + (int)(Math.random() * 5000), jobsNumber+xtrajobs);
+//				cluster14.getResourceManager().addJob(job_temp);
+//				
+//				xtrajobs++;
+//				job_temp = new Job(8000 + (int)(Math.random() * 5000), jobsNumber+xtrajobs);
+//				cluster17.getResourceManager().addJob(job_temp);
+//				
+//				xtrajobs++;
+//				job_temp = new Job(8000 + (int)(Math.random() * 5000), jobsNumber+xtrajobs);
+//				cluster18.getResourceManager().addJob(job_temp);
 //			}
+			
 			try {
 				// Sleep a while before creating a new job
 				Thread.sleep(100L);
@@ -139,6 +181,7 @@ public class Simulation implements Runnable {
 				assert(false) : "Simulation runtread was interrupted";
 			}
 		}
+		
 		
 	}
 

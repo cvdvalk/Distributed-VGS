@@ -1,6 +1,7 @@
 package distributed.systems.gridscheduler.model;
 
 import java.io.Serializable;
+import java.util.Date;
 
 /**
  * This class represents a job that can be executed on a grid. 
@@ -15,6 +16,8 @@ public class Job  implements Serializable{
 	private String log;
 	private String last;
 	private boolean nodeToNode;
+	private Date timeArrived;
+	private Date timeCompleted;
 
 	/**
 	 * Constructs a new Job object with a certain duration and id. The id has to be unique
@@ -75,7 +78,8 @@ public class Job  implements Serializable{
 	 * @return a string representation of this job object
 	 */
 	public String toString() {
-		return "Job {ID = " + id + ", " + log + "}";
+		long wait = ((( timeCompleted.getTime() - timeArrived.getTime() ) - duration));
+		return "Job {ID = " + id + ", " + "wait=" + wait + ", "+ log + "}";
 	}
 	
 	public void addToLog(String clusterOrNode){
@@ -104,6 +108,22 @@ public class Job  implements Serializable{
 	
 	public boolean isNodeToNode(){
 		return nodeToNode;
+	}
+	
+	public void setTimeArrived(){
+		timeArrived = new Date();
+	}
+	
+	public Date getTimeArrived(){
+		return timeArrived;
+	}
+	
+	public void setTimeCompleted(){
+		timeCompleted = new Date();
+	}
+	
+	public Date getTimeCompleted(){
+		return timeCompleted;
 	}
 
 }

@@ -32,6 +32,8 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 	private ConcurrentHashMap<String, Integer> resourceManagerLoad;
 	private ConcurrentHashMap<String, Integer> resourceManagerLoadMax;
 	private ConcurrentHashMap<String, Integer> NodeLoad;
+	private ConcurrentHashMap<String, Integer> completion;
+	private ArrayList<ControlMessage> comp;
 	// polling frequency, 1hz
 	private long pollSleep = 1000;
 	
@@ -58,7 +60,9 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 		this.resourceManagerLoadMax = new ConcurrentHashMap<String, Integer>();
 		this.NodeLoad = new ConcurrentHashMap<String, Integer>();
 		this.jobQueue = new ConcurrentLinkedQueue<Job>();
+		this.completion = new ConcurrentHashMap<String, Integer>();
 		this.gridScheduler = new ArrayList<String>();
+		comp = new ArrayList();
 
 		// start the polling thread
 		running = true;
@@ -110,6 +114,7 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 		if (controlMessage.getType() == ControlMessageType.ResourceManagerJoin){
 			resourceManagerLoad.put(controlMessage.getUrl(), Integer.MAX_VALUE);
 			resourceManagerLoadMax.put(controlMessage.getUrl(), controlMessage.getMax());
+			completion.put(controlMessage.getUrl(), 0);
 		}
 		if (controlMessage.getType() == ControlMessageType.GridSchedulerNodeJoin){
 			gridScheduler.add(controlMessage.getUrl());
@@ -157,6 +162,14 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 		//
 		if(controlMessage.getType() == ControlMessageType.ReplyToNode){
 			NodeLoad.put(controlMessage.getUrl(),controlMessage.getLoad());
+		}
+		//
+		if(controlMessage.getType() == ControlMessageType.JobCompletion){
+			String tm_temp = controlMessage.getUrl();
+			int load_temp = completion.get(tm_temp);
+			load_temp++;
+			completion.put(tm_temp, load_temp);
+			comp.add(controlMessage);
 		}
 		
 	}
@@ -331,29 +344,29 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 					}
 					
 				}
-				else{
-					try {
-						registry = LocateRegistry.getRegistry();
-						if (leastLoadedNode!=null) {
-							ControlMessage cMessage = new ControlMessage(ControlMessageType.AddJob);
-							cMessage.setJob(job);
-							
-							GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(leastLoadedNode);
-							temp.onMessageReceived(cMessage);
-							
-							jobQueue.remove(job);
-							int load = NodeLoad.get(leastLoadedNode);
-							NodeLoad.put(leastLoadedNode, load+1);
-						}
-						
-					} catch (RemoteException e) {
-						e.printStackTrace();
-					} catch (NotBoundException e) {
-						e.printStackTrace();
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-				}
+//				else{
+//					try {
+//						registry = LocateRegistry.getRegistry();
+//						if (leastLoadedNode!=null) {
+//							ControlMessage cMessage = new ControlMessage(ControlMessageType.AddJob);
+//							cMessage.setJob(job);
+//							
+//							GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(leastLoadedNode);
+//							temp.onMessageReceived(cMessage);
+//							
+//							jobQueue.remove(job);
+//							int load = NodeLoad.get(leastLoadedNode);
+//							NodeLoad.put(leastLoadedNode, load+1);
+//						}
+//						
+//					} catch (RemoteException e) {
+//						e.printStackTrace();
+//					} catch (NotBoundException e) {
+//						e.printStackTrace();
+//					} catch (InterruptedException e) {
+//						e.printStackTrace();
+//					}
+//				}
 				
 				
 			}
@@ -423,6 +436,15 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 			}
 		}
 		return false;
+	}
+	
+	public String toString(){
+		String result = "";
+//		for (String key : completion.keySet())
+//		{
+//			result += "["+ key + ": " + completion.get(key) + "]";
+//		}
+		return url + ": " + comp.size();
 	}
 	
 }
