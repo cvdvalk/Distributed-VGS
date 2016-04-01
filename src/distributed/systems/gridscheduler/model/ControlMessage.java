@@ -25,6 +25,7 @@ public class ControlMessage implements Serializable{
 	private Job job;
 	private int load;
 	private int max;
+	private boolean won;
 
 	/**
 	 * Constructs a new ControlMessage object

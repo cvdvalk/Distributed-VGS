@@ -27,6 +27,7 @@ public class Cluster implements Runnable {
 	// polling thread
 	private Thread pollingThread;
 	private boolean running;
+	private int nodeCount;
 	
 	/**
 	 * Creates a new Cluster, with a number of nodes and a resource manager
@@ -52,6 +53,7 @@ public class Cluster implements Runnable {
 		
 		// Initialize members
 		this.url = name;
+		this.nodeCount = nodeCount;
 
 		System.out.println("Creating cluster: " + url);
 		nodes = new ArrayList<Node>(nodeCount);
@@ -62,8 +64,6 @@ public class Cluster implements Runnable {
 	    Registry registry = LocateRegistry.getRegistry();
 	    
 		registry.bind(url, resourceManager);
-//		Thread t = new Thread(p1);
-//		System.err.println("Process ready");
 		
 		resourceManager.connectToGridScheduler(gridSchedulerURL);
 
@@ -88,7 +88,8 @@ public class Cluster implements Runnable {
 	 * @return the number of nodes in this cluster
 	 */
 	public int getNodeCount() {
-		return nodes.size();
+		return nodeCount;
+		//return nodes.size();
 	}
 
 	/**

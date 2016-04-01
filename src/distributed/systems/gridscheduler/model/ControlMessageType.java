@@ -26,5 +26,6 @@ public enum ControlMessageType {
 	JobCompletion,		// from RM to GS
 	NodeStart,			//from GSN to GSN
 	NodeStartReply, 	//from GSN to GSN
-	RemoveJob
+	RemoveJob,
+	ReplyToNode
 }

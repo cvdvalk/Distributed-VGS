@@ -32,6 +32,7 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 	private int jobQueueSize;
 	public static final int MAX_QUEUE_SIZE = 32; 
 	private String completed;
+	private int load;
 
 	// Scheduler url
 	private String gridSchedulerURL = null;
@@ -55,11 +56,13 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		this.cluster = cluster;
 		this.socketURL = cluster.getName();
 		completed = "";
+		load = 0;
 		// Number of jobs in the queue must be larger than the number of nodes, because
 		// jobs are kept in queue until finished. The queue is a bit larger than the 
 		// number of nodes for efficiency reasons - when there are only a few more jobs than
 		// nodes we can assume a node will become available soon to handle that job.
 		jobQueueSize = cluster.getNodeCount() + MAX_QUEUE_SIZE;
+//		System.out.println(socketURL+ ": " + cluster.getNodeCount());
 
 	}
 
@@ -85,7 +88,7 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		job.setLog(socketURL);
 		job.setLast(socketURL);
 		//TODO: msg job arrival to gsn?
-		
+//		System.out.println(jobQueue.size());
 		// if the jobqueue is full, offload the job to the grid scheduler
 		if (jobQueue.size() >= jobQueueSize) {
 
@@ -131,6 +134,8 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		while ( ((waitingJob = getWaitingJob()) != null) && ((freeNode = cluster.getFreeNode()) != null) ) {
 			freeNode.startJob(waitingJob);
 			//TODO: send msg to GSN jobstarted
+//			load++;
+//			System.out.println(socketURL + ": " + load);
 		}
 
 	}
@@ -145,6 +150,8 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		assert(job != null) : "parameter 'job' cannot be null";
 		System.out.println(job.toString());
 		// job finished, remove it from our pool
+//		load--;
+//		System.out.println(socketURL + ": " + load);
 		jobQueue.remove(job);
 		completed += job.toString();
 //		System.out.println(socketURL + ": load: "+jobQueue.size());
@@ -177,7 +184,6 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		ControlMessage message = new ControlMessage(ControlMessageType.ResourceManagerJoin);
 		message.setUrl(socketURL);
 		message.setMax(jobQueueSize);
-//		message.setMax(cluster.getNodeCount());
 		
 		Registry registry = LocateRegistry.getRegistry();
 		GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
@@ -217,7 +223,7 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		if (controlMessage.getType() == ControlMessageType.RequestLoad)
 		{
 //			System.out.println(socketURL + ": received requestload msg");
-//			scheduleJobs();
+			scheduleJobs();
 			ControlMessage replyMessage = new ControlMessage(ControlMessageType.ReplyLoad);
 			replyMessage.setUrl(cluster.getName());
 			replyMessage.setLoad(jobQueue.size());
