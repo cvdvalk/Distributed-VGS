@@ -10,7 +10,7 @@ import java.io.Serializable;
  * facilitate the passing of common arguments. Feel free to expand it and adapt it to your 
  * needs. 
  * 
- * @author Niels Brouwers
+ * @author Niels Brouwers edited by Carlo van der Valk and Ka-Ping Wan
  *
  */
 public class ControlMessage implements Serializable{

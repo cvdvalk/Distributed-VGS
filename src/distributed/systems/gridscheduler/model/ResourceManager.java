@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * 
  * Of course, this scheme is totally open to revision.
  * 
- * @author Niels Brouwers, Boaz Pat-El
+ * @author Niels Brouwers, Boaz Pat-El edited by Carlo van der Valk and Ka-Ping Wan
  *
  */
 public class ResourceManager extends UnicastRemoteObject implements INodeEventHandler, ResourceManagerInterface {
@@ -62,7 +62,6 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		// number of nodes for efficiency reasons - when there are only a few more jobs than
 		// nodes we can assume a node will become available soon to handle that job.
 		jobQueueSize = cluster.getNodeCount() + MAX_QUEUE_SIZE;
-//		System.out.println(socketURL+ ": " + cluster.getNodeCount());
 
 	}
 
@@ -87,8 +86,6 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		assert(gridSchedulerURL != null) : "No grid scheduler URL has been set for this resource manager";
 		job.setLog(socketURL);
 		job.setLast(socketURL);
-		//TODO: msg job arrival to gsn?
-//		System.out.println(jobQueue.size());
 		// if the jobqueue is full, offload the job to the grid scheduler
 		if (jobQueue.size() >= jobQueueSize) {
 
@@ -133,9 +130,6 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		
 		while ( ((waitingJob = getWaitingJob()) != null) && ((freeNode = cluster.getFreeNode()) != null) ) {
 			freeNode.startJob(waitingJob);
-			//TODO: send msg to GSN jobstarted
-//			load++;
-//			System.out.println(socketURL + ": " + load);
 		}
 
 	}
@@ -150,12 +144,8 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		assert(job != null) : "parameter 'job' cannot be null";
 		System.out.println(job.toString());
 		// job finished, remove it from our pool
-//		load--;
-//		System.out.println(socketURL + ": " + load);
 		jobQueue.remove(job);
 		completed += job.toString();
-//		System.out.println(socketURL + ": load: "+jobQueue.size());
-		//TODO: send msg to GSN jobdone
 	}
 
 	/**
@@ -188,8 +178,6 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		Registry registry = LocateRegistry.getRegistry();
 		GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
 		temp.onMessageReceived(message);
-//		socket.sendMessage(message, "localsocket://" + gridSchedulerURL);
-
 	}
 
 	/**
@@ -212,8 +200,6 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		// resource manager wants to offload a job to us 
 		if (controlMessage.getType() == ControlMessageType.AddJob)
 		{
-			//TODO: msg Job arrival
-//			System.out.println(socketURL + ": Received addjob msg");
 			controlMessage.getJob().addToLog(socketURL);
 			jobQueue.add(controlMessage.getJob());
 			scheduleJobs();
@@ -222,14 +208,10 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		// 
 		if (controlMessage.getType() == ControlMessageType.RequestLoad)
 		{
-//			System.out.println(socketURL + ": received requestload msg");
 			scheduleJobs();
 			ControlMessage replyMessage = new ControlMessage(ControlMessageType.ReplyLoad);
 			replyMessage.setUrl(cluster.getName());
 			replyMessage.setLoad(jobQueue.size());
-//			if(jobQueue.size() == 0){
-//				System.out.println(completed);
-//			}
 			Registry registry = LocateRegistry.getRegistry();
 			GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
 			temp.onMessageReceived(replyMessage);

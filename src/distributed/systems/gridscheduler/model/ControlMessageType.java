@@ -4,7 +4,7 @@ package distributed.systems.gridscheduler.model;
  * 
  * Different types of control messages. Feel free to add new message types if you need any. 
  * 
- * @author Niels Brouwers
+ * @author Niels Brouwers edited by Carlo van der Valk and Ka-Ping Wan
  *
  */
 public enum ControlMessageType {
@@ -26,6 +26,5 @@ public enum ControlMessageType {
 	JobCompletion,		// from RM to GS
 	NodeStart,			//from GSN to GSN
 	NodeStartReply, 	//from GSN to GSN
-	RemoveJob,
 	ReplyToNode
 }

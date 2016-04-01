@@ -6,7 +6,7 @@ package distributed.systems.gridscheduler.model;
  * state. When it is assigned to a node and execution is started, its state changes to <i>Running</i>.
  * Finally, when a job is finished it moves into the <i>Done</i> state.   
  * 
- * @author Niels Brouwers
+ * @author Niels Brouwers edited by Carlo van der Valk and Ka-Ping Wan
  *
  */
 public enum JobStatus {

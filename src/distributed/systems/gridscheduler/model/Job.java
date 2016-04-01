@@ -5,7 +5,7 @@ import java.io.Serializable;
 /**
  * This class represents a job that can be executed on a grid. 
  * 
- * @author Niels Brouwers
+ * @author Niels Brouwers edited by Carlo van der Valk and Ka-Ping Wan
  *
  */
 public class Job  implements Serializable{
@@ -14,6 +14,7 @@ public class Job  implements Serializable{
 	private long id;
 	private String log;
 	private String last;
+	private boolean nodeToNode;
 
 	/**
 	 * Constructs a new Job object with a certain duration and id. The id has to be unique
@@ -35,6 +36,7 @@ public class Job  implements Serializable{
 		this.id = id; 
 		log = "";
 		last = "";
+		nodeToNode = false;
 	}
 
 	/**
@@ -94,6 +96,14 @@ public class Job  implements Serializable{
 	
 	public String getLast(){
 		return last;
+	}
+	
+	public void setNodeToNode(){
+		nodeToNode = true;
+	}
+	
+	public boolean isNodeToNode(){
+		return nodeToNode;
 	}
 
 }
