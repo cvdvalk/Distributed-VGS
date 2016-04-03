@@ -5,6 +5,10 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -37,6 +41,7 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 	private int load;
 	private AtomicLong time;
 	private AtomicInteger completions;
+	private List<Long> pirateList;
 
 	// Scheduler url
 	private String gridSchedulerURL = null;
@@ -56,7 +61,7 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		assert(cluster != null);
 		System.out.println("Creating ResourceManager: "+ cluster.getName());
 		this.jobQueue = new ConcurrentLinkedQueue<Job>();
-
+		pirateList = Collections.synchronizedList(new ArrayList<Long>());
 		this.cluster = cluster;
 		this.socketURL = cluster.getName();
 		completed = "";
@@ -160,12 +165,16 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		assert(job != null) : "parameter 'job' cannot be null";
 		job.setTimeCompleted();
 		System.out.println(job.toString());
-		
-		time.addAndGet( (long) (job.getTimeCompleted().getTime() - job.getTimeArrived().getTime() - job.getDuration()) );
+		long t = (long) (job.getTimeCompleted().getTime() - job.getTimeArrived().getTime() - job.getDuration());
+		time.addAndGet( t );
 		// job finished, remove it from our pool
 		jobQueue.remove(job);
 		completed += job.toString();
 		completions.addAndGet(1);
+		pirateList.add(t);
+		if(jobQueue.size() == 0){
+			System.out.println(toString());
+		}
 		
 		//notify gsn that job was completed
 		ControlMessage notificationMessage = new ControlMessage(ControlMessageType.JobCompletion);
@@ -273,7 +282,7 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 			GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
 			temp.onMessageReceived(replyMessage);
 			
-			System.out.println(toString());
+			//System.out.println(toString());
 		}
 		//
 		if(Math.random() * 1000 <= 1){
@@ -288,8 +297,34 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 	}
 	
 	public String toString(){
-		if(completions.get() > 0 && time.get() > 0){
-			return socketURL + ": " + " - " + completions.get() + " - " + (time.get() / completions.get());
+		if(completions.get() > 0 && time.get() > 0 && pirateList.size() > 3){
+			long[] test = new long[pirateList.size()];
+			int i = 0;
+			String all_data  = "";
+			for(long pirate: pirateList){
+				test[i] = pirate;
+				i++;
+				all_data += "," + pirate;
+			}
+			Arrays.sort(test);
+			long min = test[0];
+			long max = test[pirateList.size()-1];
+			int middle = ((test.length) / 2);
+			long median = getMedian(test);
+			long q1 = getMedian(Arrays.copyOfRange(test, 0, middle));
+			long q3 = getMedian(Arrays.copyOfRange(test, middle, pirateList.size()-1));
+			long average = time.get() / completions.get();
+			
+			all_data  = socketURL + "" + all_data;
+			
+//			return all_data;
+			return socketURL + "," + "" + completions.get() 
+					+ "," + average 
+					+ "," + min
+					+ "," + q1
+					+ "," + median
+					+ "," + q3
+					+ "," + max;
 		}
 		return "";
 	}
@@ -315,7 +350,17 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+	}
+	
+	private long getMedian(long[] in){
+		long median;
+		if (in.length % 2 == 0){
+		    median = ((long)in[in.length/2] + (long)in[in.length/2 - 1])/2;
+		}
+		else{
+		    median = (long) in[in.length/2];
+		}
+		return median;
 	}
 
 }
