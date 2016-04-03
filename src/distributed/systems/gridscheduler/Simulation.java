@@ -94,9 +94,9 @@ public class Simulation implements Runnable {
 
 		Cluster cluster17 = new Cluster("cluster17", "Node5", 32);
 		Cluster cluster18 = new Cluster("cluster18", "Node5", 32);
-//		Cluster cluster19 = new Cluster("cluster19", "Node5", 64);
+		Cluster cluster19 = new Cluster("cluster19", "Node5", 64);
 //		Cluster cluster20 = new Cluster("cluster20", "Node5", 128);//256
-		clusters.add(cluster17);clusters.add(cluster18);
+		clusters.add(cluster17);clusters.add(cluster18);clusters.add(cluster19);
 		
 		int xtrajobs = 0;
 		int jobsNumber = 500;

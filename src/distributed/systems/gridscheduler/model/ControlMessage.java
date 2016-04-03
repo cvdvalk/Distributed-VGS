@@ -25,8 +25,8 @@ public class ControlMessage implements Serializable{
 	private Job job;
 	private int load;
 	private int max;
-	private boolean won;
-
+	private boolean fromCluster;
+	
 	/**
 	 * Constructs a new ControlMessage object
 	 * @param type the type of control message
@@ -95,6 +95,14 @@ public class ControlMessage implements Serializable{
 	
 	public int getMax(){
 		return max;
+	}
+	
+	public void setFromCluster(boolean thing){
+		fromCluster = thing;
+	}
+	
+	public boolean fromCluster(){
+		return fromCluster;
 	}
 
 

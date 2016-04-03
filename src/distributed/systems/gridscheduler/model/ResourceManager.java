@@ -36,7 +36,7 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 	private String completed;
 	private int load;
 	private AtomicLong time;
-	private AtomicInteger pirate;
+	private AtomicInteger completions;
 
 	// Scheduler url
 	private String gridSchedulerURL = null;
@@ -67,7 +67,7 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		// number of nodes for efficiency reasons - when there are only a few more jobs than
 		// nodes we can assume a node will become available soon to handle that job.
 		jobQueueSize = cluster.getNodeCount() + MAX_QUEUE_SIZE;
-		pirate = new AtomicInteger(0);
+		completions = new AtomicInteger(0);
 	}
 
 	/**
@@ -92,15 +92,24 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		job.setLog(socketURL);
 		job.setLast(socketURL);
 		job.setTimeArrived();
+		
+		//send msg to gsn that job has arrived
+		ControlMessage notificationMessage = new ControlMessage(ControlMessageType.JobArrival);
+		notificationMessage.setJob(job);
+		notificationMessage.setUrl(socketURL);
+		Registry registry = LocateRegistry.getRegistry();
+		GridSchedulerNodeInterface temp1 = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
+		temp1.onMessageReceived(notificationMessage);
+		
 		// if the jobqueue is full, offload the job to the grid scheduler
 		if (jobQueue.size() >= jobQueueSize) {
 
 			ControlMessage controlMessage = new ControlMessage(ControlMessageType.AddJob);
 			controlMessage.setJob(job);
-
-			Registry registry = LocateRegistry.getRegistry();
-			GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
-			temp.onMessageReceived(controlMessage);
+			controlMessage.setUrl(socketURL);
+			registry = LocateRegistry.getRegistry();
+			GridSchedulerNodeInterface temp2 = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
+			temp2.onMessageReceived(controlMessage);
 
 			// otherwise store it in the local queue
 		} else {
@@ -155,17 +164,18 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		// job finished, remove it from our pool
 		jobQueue.remove(job);
 		completed += job.toString();
-		pirate.addAndGet(1);
+		completions.addAndGet(1);
 		
-		ControlMessage message = new ControlMessage(ControlMessageType.JobCompletion);
-		message.setUrl(socketURL);
-		
+		//notify gsn that job was completed
+		ControlMessage notificationMessage = new ControlMessage(ControlMessageType.JobCompletion);
+		notificationMessage.setUrl(socketURL);
+		notificationMessage.setJob(job);
 		
 		Registry registry;
 		try {
 			registry = LocateRegistry.getRegistry();
 			GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
-			temp.onMessageReceived(message);
+			temp.onMessageReceived(notificationMessage);
 		} catch (RemoteException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -233,7 +243,22 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		{
 			controlMessage.getJob().addToLog(socketURL);
 			jobQueue.add(controlMessage.getJob());
+			
+			//send msg to gsn that job has arrived
+			ControlMessage notificationMessage = new ControlMessage(ControlMessageType.JobArrival);
+			notificationMessage.setJob(controlMessage.getJob());
+			notificationMessage.setUrl(socketURL);
+			notificationMessage.setFromCluster(true);
+			Registry registry = LocateRegistry.getRegistry();
+			GridSchedulerNodeInterface temp1 = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
+			temp1.onMessageReceived(notificationMessage);
+			
+			
+			
+			
 			scheduleJobs();
+			
+			
 		}
 		// 
 		if (controlMessage.getType() == ControlMessageType.RequestLoad)
@@ -255,8 +280,8 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 	}
 	
 	public String toString(){
-		if(pirate.get() > 0 && time.get() > 0){
-			return socketURL + ": " + " - " + pirate.get() + " - " + (time.get() / pirate.get());
+		if(completions.get() > 0 && time.get() > 0){
+			return socketURL + ": " + " - " + completions.get() + " - " + (time.get() / completions.get());
 		}
 		return "";
 	}
