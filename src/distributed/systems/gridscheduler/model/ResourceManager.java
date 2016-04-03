@@ -97,6 +97,7 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		ControlMessage notificationMessage = new ControlMessage(ControlMessageType.JobArrival);
 		notificationMessage.setJob(job);
 		notificationMessage.setUrl(socketURL);
+		notificationMessage.setFromCluster(true);
 		Registry registry = LocateRegistry.getRegistry();
 		GridSchedulerNodeInterface temp1 = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
 		temp1.onMessageReceived(notificationMessage);
@@ -170,6 +171,7 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		ControlMessage notificationMessage = new ControlMessage(ControlMessageType.JobCompletion);
 		notificationMessage.setUrl(socketURL);
 		notificationMessage.setJob(job);
+		notificationMessage.setFromCluster(true);
 		
 		Registry registry;
 		try {
@@ -273,6 +275,12 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 			
 			System.out.println(toString());
 		}
+		//
+		if(Math.random() * 1000 <= 1){
+			System.out.println(socketURL + ": crashed" );
+			Crash();
+			return;
+		}
 	}
 	
 	public int getLoad(){
@@ -284,6 +292,30 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 			return socketURL + ": " + " - " + completions.get() + " - " + (time.get() / completions.get());
 		}
 		return "";
+	}
+	
+	public void Crash(){
+		this.jobQueue = new ConcurrentLinkedQueue<Job>();
+		
+		ControlMessage replyMessage = new ControlMessage(ControlMessageType.NodeStart);
+		replyMessage.setUrl(socketURL);
+		replyMessage.setFromCluster(true);
+		Registry registry;
+		try {
+			registry = LocateRegistry.getRegistry();
+			GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
+			temp.onMessageReceived(replyMessage);
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NotBoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 	}
 
 }

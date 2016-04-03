@@ -109,6 +109,7 @@ public class Simulation implements Runnable {
 				Job job2 = new Job(8000 + (int)(Math.random() * 5000), jobsNumber+xtrajobs);
 				cluster5.getResourceManager().addJob(job2);
 				
+				
 			}
 			xtrajobs++;
 			Job job3 = new Job(8000 + (int)(Math.random() * 5000), jobsNumber+xtrajobs);

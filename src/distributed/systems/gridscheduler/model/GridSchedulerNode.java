@@ -109,6 +109,8 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 		
 		ControlMessage controlMessage = (ControlMessage)message;
 		
+		
+		
 		// resource manager wants to join this grid scheduler 
 		// when a new RM is added, its load is set to Integer.MAX_VALUE to make sure
 		// no jobs are scheduled to it until we know the actual load
@@ -122,6 +124,10 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 			gridScheduler.add(controlMessage.getUrl());
 			NodeLoad.put(controlMessage.getUrl(), Integer.MAX_VALUE);
 		}
+		
+		
+		
+		
 		// resource manager wants to offload a job to us 
 		if (controlMessage.getType() == ControlMessageType.AddJob){
 			if(!hasJob(controlMessage.getJob())){
@@ -248,6 +254,47 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 				}
 			}
 		}
+		//
+		if(controlMessage.getType() == ControlMessageType.NodeStart){
+			//send all jobs from log that has the name of the crashed node
+			// loop over all resource managers, and pick the one with the lowest load
+			Registry registry;
+			for (long key : job_log.keySet())
+			{
+				if(job_log.get(key)!=null){
+					if(job_log.get(key).equals(controlMessage.getUrl())){
+						try{
+							registry = LocateRegistry.getRegistry();
+							ControlMessage cMessage = new ControlMessage(ControlMessageType.AddJob);
+							cMessage.setJob(job_log2.get(key));
+							cMessage.setUrl(url);
+							if(!controlMessage.fromCluster()){
+								GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(controlMessage.getUrl());
+								temp.onMessageReceived(cMessage);
+							}else if(controlMessage.fromCluster()){
+								ResourceManagerInterface temp = (ResourceManagerInterface) registry.lookup(controlMessage.getUrl());
+								temp.onMessageReceived(cMessage);
+							}
+							
+							
+						}catch (RemoteException e) {
+						e.printStackTrace();
+						} catch (NotBoundException e) {
+							e.printStackTrace();
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+				}
+			}
+				
+		}
+		if(Math.random() * 1000 <= 1){
+			System.out.println(url + ": crashed" );
+			NodeCrash();
+			return;
+		}
 	}
 
 	// finds the least loaded resource manager and returns its url
@@ -364,6 +411,8 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 						int load = resourceManagerLoad.get(leastLoadedRM);
 						resourceManagerLoad.put(leastLoadedRM, load+1);
 						
+						job_log.put(job.getId(), leastLoadedRM);
+						job_log2.put(job.getId(), job);
 					}
 					else{
 						try {
@@ -380,8 +429,12 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 								jobQueue.remove(job);
 								
 								jobQueue.remove(job);
-								int load = NodeLoad.get(leastLoadedNode);
-								NodeLoad.put(leastLoadedNode, load+1);
+								if( NodeLoad.get(leastLoadedNode)!=null){
+									int load = NodeLoad.get(leastLoadedNode);
+									NodeLoad.put(leastLoadedNode, load+1);
+								}
+								job_log.put(job.getId(), leastLoadedNode);
+								job_log2.put(job.getId(), job);
 							}
 							
 						} catch (RemoteException e) {
@@ -429,11 +482,78 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 	
 	public void NodeCrash() throws InterruptedException{
 		//crash node, clear most data, sleep, restart, send restart msg
-		running = false;
-		Thread.sleep(5000);
+//		running = false;
+//		this.resourceManagerLoad = new ConcurrentHashMap<String, Integer>();
+//		this.NodeLoad = new ConcurrentHashMap<String, Integer>();
+		this.jobQueue = new ConcurrentLinkedQueue<Job>();
+//		job_log = new ConcurrentHashMap<Long, String>();
+//		job_log2 = new ConcurrentHashMap<Long, Job>();
+		
+//		Thread.sleep(5000);
+		
+		for (String rmUrl : resourceManagerLoad.keySet())
+		{
+			ControlMessage cMessage = new ControlMessage(ControlMessageType.RequestLoad);
+			cMessage.setUrl(this.getUrl());
+			Registry registry;
+			try {
+				registry = LocateRegistry.getRegistry();
+				ResourceManagerInterface temp = (ResourceManagerInterface) registry.lookup(rmUrl);
+				temp.onMessageReceived(cMessage);
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			} catch (NotBoundException e) {
+				e.printStackTrace();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+		}
+		for (String rmUrl : NodeLoad.keySet())
+		{
+			ControlMessage cMessage = new ControlMessage(ControlMessageType.RequestLoad);
+			cMessage.setUrl(this.getUrl());
+			Registry registry;
+			try {
+				registry = LocateRegistry.getRegistry();
+				GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(rmUrl);
+				temp.onMessageReceived(cMessage);
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			} catch (NotBoundException e) {
+				e.printStackTrace();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
 		//for each gsn, send msg
 		//they send addjob messages?
-		running = true;
+		// send a message to each resource manager, requesting its load
+//		running = true;
+//		this.run();
+		ControlMessage cMessage = new ControlMessage(ControlMessageType.NodeStart);
+		cMessage.setUrl(url);
+		cMessage.setFromCluster(false);
+		for (String bro_url : gridScheduler)
+		{
+			Registry registry;
+			try {
+				registry = LocateRegistry.getRegistry();
+				GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(bro_url);
+				temp.onMessageReceived(cMessage);
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			} catch (NotBoundException e) {
+				e.printStackTrace();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
 		//record restart time
 		//record recovery time
 	}
