@@ -6,7 +6,7 @@ import java.util.Date;
 /**
  * This class represents a job that can be executed on a grid. 
  * 
- * @author Niels Brouwers edited by Carlo van der Valk and Ka-Ping Wan
+ * @author Niels Brouwers edited by Carlo van der Valk
  *
  */
 public class Job  implements Serializable{

@@ -13,7 +13,7 @@ import java.util.List;
  * The Cluster class represents a single cluster in the virtual grid system. It consists of a 
  * collection of nodes and a resource manager. 
  * 
- * @author Niels Brouwers edited by Carlo van der Valk and Ka-Ping Wan
+ * @author Niels Brouwers edited by Carlo van der Valk
  *
  */
 public class Cluster implements Runnable {
@@ -45,7 +45,7 @@ public class Cluster implements Runnable {
 	 * @throws AlreadyBoundException 
 	 * @throws InterruptedException 
 	 */
-	public Cluster(String name, String gridSchedulerURL, int nodeCount) throws RemoteException, NotBoundException, AlreadyBoundException, InterruptedException {
+	public Cluster(String name, String gridSchedulerURL, int nodeCount, String adress, int port, String nodeAdress, int nodePort) throws RemoteException, NotBoundException, AlreadyBoundException, InterruptedException {
 		// Preconditions
 		assert(name != null) : "parameter 'name' cannot be null";
 		assert(gridSchedulerURL != null) : "parameter 'gridSchedulerURL' cannot be null";
@@ -59,13 +59,20 @@ public class Cluster implements Runnable {
 		nodes = new ArrayList<Node>(nodeCount);
 		
 		// Initialize the resource manager for this cluster
-		resourceManager = new ResourceManager(this);
+		resourceManager = new ResourceManager(this, adress, port);
+		
+		try {
+			java.rmi.registry.LocateRegistry.createRegistry(port);
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}
+		
 		// Bind the remote object's stub in the registry
-	    Registry registry = LocateRegistry.getRegistry();
+	    Registry registry = LocateRegistry.getRegistry(port);
 	    
 		registry.bind(url, resourceManager);
 		
-		resourceManager.connectToGridScheduler(gridSchedulerURL);
+		resourceManager.connectToGridScheduler(gridSchedulerURL, nodeAdress, nodePort);
 
 		// Initialize the nodes 
 		for (int i = 0; i < nodeCount; i++) {

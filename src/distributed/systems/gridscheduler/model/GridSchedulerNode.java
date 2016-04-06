@@ -1,5 +1,6 @@
 package distributed.systems.gridscheduler.model;
 
+import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -16,7 +17,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * The GridScheduler class represents a single-server implementation of the grid scheduler in the
  * virtual grid system.
  * 
- * @author Niels Brouwers, edited by Carlo van der Valk and Ka-Ping Wan
+ * @author Niels Brouwers, edited by Carlo van der Valk
  *
  */
 public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, GridSchedulerNodeInterface {
@@ -33,6 +34,8 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 	private ConcurrentHashMap<String, Integer> resourceManagerLoadMax;
 	private ConcurrentHashMap<String, Integer> NodeLoad;
 	private ConcurrentHashMap<String, Integer> completion;
+	private ConcurrentHashMap<String, Integer> port;
+	private ConcurrentHashMap<String, String> adress;
 	private ConcurrentHashMap<Long, String> job_log;
 	private ConcurrentHashMap<Long, Job> job_log2;
 	// polling frequency, 1hz
@@ -41,6 +44,8 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 	// polling thread
 	private Thread pollingThread;
 	private boolean running;
+	private String adrr;
+	private int portnr;
 	
 	/**
 	 * Constructs a new GridScheduler object at a given url.
@@ -50,18 +55,29 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 	 * <DD>parameter <CODE>url</CODE> cannot be null
 	 * </DL>
 	 * @param url the gridscheduler's url to register at
+	 * @throws AlreadyBoundException 
 	 */
-	public GridSchedulerNode(String url) throws RemoteException{
+	public GridSchedulerNode(String url, String adress, int port) throws RemoteException, AlreadyBoundException{
 		// preconditions
 		assert(url != null) : "parameter 'url' cannot be null";
 		
+		try {
+			java.rmi.registry.LocateRegistry.createRegistry(port);
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}
+		Registry registry = LocateRegistry.getRegistry(port);
 		// init members
 		this.url = url;
+		this.adrr = adress;
+		this.portnr = port;
 		this.resourceManagerLoad = new ConcurrentHashMap<String, Integer>();
 		this.resourceManagerLoadMax = new ConcurrentHashMap<String, Integer>();
 		this.NodeLoad = new ConcurrentHashMap<String, Integer>();
 		this.jobQueue = new ConcurrentLinkedQueue<Job>();
 		this.completion = new ConcurrentHashMap<String, Integer>();
+		this.port = new ConcurrentHashMap<String, Integer>();
+		this.adress = new ConcurrentHashMap<String, String>();
 		this.gridScheduler = new ArrayList<String>();
 		job_log = new ConcurrentHashMap<Long, String>();
 		job_log2 = new ConcurrentHashMap<Long, Job>();
@@ -69,6 +85,8 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 		running = true;
 		pollingThread = new Thread(this);
 		pollingThread.start();
+		registry.bind(url, this);
+		
 		System.out.println("Creating GSN: " + url);
 	}
 	
@@ -117,12 +135,18 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 		if (controlMessage.getType() == ControlMessageType.ResourceManagerJoin){
 			resourceManagerLoad.put(controlMessage.getUrl(), Integer.MAX_VALUE);
 			resourceManagerLoadMax.put(controlMessage.getUrl(), controlMessage.getMax());
+			this.port.put(controlMessage.getUrl(), controlMessage.getPort());
+			this.adress.put(controlMessage.getUrl(), controlMessage.getAdress());
 			completion.put(controlMessage.getUrl(), 0);
+			System.out.println("added cluster: "+controlMessage.getUrl());
 		}
 		//couple two GSN
 		if (controlMessage.getType() == ControlMessageType.GridSchedulerNodeJoin){
 			gridScheduler.add(controlMessage.getUrl());
+			this.port.put(controlMessage.getUrl(), controlMessage.getPort());
+			this.adress.put(controlMessage.getUrl(), controlMessage.getAdress());
 			NodeLoad.put(controlMessage.getUrl(), Integer.MAX_VALUE);
+//			System.out.println("added node: "+controlMessage.getUrl());
 		}
 		
 		
@@ -144,10 +168,13 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 				{
 					ControlMessage cMessage = new ControlMessage(ControlMessageType.JobArrival);
 					cMessage.setUrl(this.getUrl());
+					cMessage.setAdress(this.adrr);
+					cMessage.setPort(portnr);
 					cMessage.setJob(controlMessage.getJob());
 					Registry registry;
 					try {
-						registry = LocateRegistry.getRegistry();
+//						System.setProperty("java.rmi.server.hostname", adress.get(bro_url)); 
+						registry = LocateRegistry.getRegistry(adress.get(bro_url),port.get(bro_url));
 						GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(bro_url);
 						temp.onMessageReceived(cMessage);
 					} catch (RemoteException e) {
@@ -165,6 +192,7 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 		//receive the load to other RM
 		if (controlMessage.getType() == ControlMessageType.ReplyLoad){
 			resourceManagerLoad.put(controlMessage.getUrl(),controlMessage.getLoad());
+//			System.out.println("got load " + controlMessage.getLoad() + " from " + controlMessage.getUrl());
 		}
 		// 
 		if (controlMessage.getType() == ControlMessageType.NodeStart){
@@ -174,14 +202,20 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 		if(controlMessage.getType() == ControlMessageType.RequestLoad){
 			ControlMessage cMessage = new ControlMessage(ControlMessageType.ReplyToNode);
 			cMessage.setUrl(this.getUrl());
+			cMessage.setAdress(this.adrr);
+			cMessage.setPort(this.portnr);
 			int load_temp = Integer.MAX_VALUE;
+//			int load_max = 1;
 			if(getLeastLoadedRM() != null){
 				load_temp = resourceManagerLoad.get(getLeastLoadedRM());
+//				load_max = resourceManagerLoadMax.get(getLeastLoadedRM());
 			}
 			cMessage.setLoad(load_temp);
+			//cMessage.setMax(load_max);
 			Registry registry;
 			try {
-				registry = LocateRegistry.getRegistry();
+//				System.setProperty("java.rmi.server.hostname", adress.get(controlMessage.getUrl())); 
+				registry = LocateRegistry.getRegistry(adress.get(controlMessage.getUrl()),controlMessage.getPort());
 				GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(controlMessage.getUrl());
 				temp.onMessageReceived(cMessage);
 			} catch (RemoteException e) {
@@ -196,6 +230,7 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 		//receive the load to other RM
 		if(controlMessage.getType() == ControlMessageType.ReplyToNode){
 			NodeLoad.put(controlMessage.getUrl(),controlMessage.getLoad());
+//			System.out.println("got load " + controlMessage.getLoad() + " from " + controlMessage.getUrl());
 		}
 		//get message that a job has been completed
 		if(controlMessage.getType() == ControlMessageType.JobCompletion){
@@ -212,7 +247,8 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 				{
 					Registry registry;
 					try {
-						registry = LocateRegistry.getRegistry();
+//						System.setProperty("java.rmi.server.hostname", adress.get(bro_url)); 
+						registry = LocateRegistry.getRegistry(adress.get(bro_url),port.get(bro_url));
 						GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(bro_url);
 						temp.onMessageReceived(controlMessage);
 					} catch (RemoteException e) {
@@ -240,7 +276,7 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 				{
 					Registry registry;
 					try {
-						registry = LocateRegistry.getRegistry();
+						registry = LocateRegistry.getRegistry(adress.get(bro_url), port.get(bro_url));
 						GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(bro_url);
 						temp.onMessageReceived(controlMessage);
 					} catch (RemoteException e) {
@@ -264,10 +300,13 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 				if(job_log.get(key)!=null){
 					if(job_log.get(key).equals(controlMessage.getUrl())){
 						try{
-							registry = LocateRegistry.getRegistry();
+//							System.setProperty("java.rmi.server.hostname", adress.get(controlMessage.getUrl())); 
+							registry = LocateRegistry.getRegistry(adress.get(controlMessage.getUrl()),port.get(controlMessage.getUrl()));
 							ControlMessage cMessage = new ControlMessage(ControlMessageType.AddJob);
 							cMessage.setJob(job_log2.get(key));
 							cMessage.setUrl(url);
+							cMessage.setAdress(adrr);
+							cMessage.setPort(portnr);
 							if(!controlMessage.fromCluster()){
 								GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(controlMessage.getUrl());
 								temp.onMessageReceived(cMessage);
@@ -290,11 +329,17 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 			}
 				
 		}
-		if(Math.random() * 1000 <= 1){
-			System.out.println(url + ": crashed" );
-			NodeCrash();
-			return;
-		}
+		//if receive heartbeat
+			//reply heartbeatreply
+		
+		//
+		//if receive heartbeat reply
+			//set heartbeat timer of senderurl to 0
+//		if(Math.random() * 1000 <= 1){
+//			System.out.println(url + ": crashed" );
+//			NodeCrash();
+//			return;
+//		}
 	}
 
 	// finds the least loaded resource manager and returns its url
@@ -338,14 +383,26 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 	 */
 	public void run() {
 		while (running) {
+			//send heartbeat
+			//if()
+			//long timeout = time_now - time_heartbeat
+			
+			// sleep
 			// send a message to each resource manager, requesting its load
 			for (String rmUrl : resourceManagerLoad.keySet())
 			{
+//				if(heartbeat_hashmap.get(rmUrl) > 30000){
+//					set load to max
+//					set jobs of that rm, in my queue
+//				}else{}
 				ControlMessage cMessage = new ControlMessage(ControlMessageType.RequestLoad);
 				cMessage.setUrl(this.getUrl());
+				cMessage.setAdress(adrr);
+				cMessage.setPort(portnr);
 				Registry registry;
 				try {
-					registry = LocateRegistry.getRegistry();
+//					System.setProperty("java.rmi.server.hostname", adress.get(rmUrl)); 
+					registry = LocateRegistry.getRegistry(adress.get(rmUrl),port.get(rmUrl));
 					ResourceManagerInterface temp = (ResourceManagerInterface) registry.lookup(rmUrl);
 					temp.onMessageReceived(cMessage);
 				} catch (RemoteException e) {
@@ -360,11 +417,18 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 			}
 			for (String rmUrl : NodeLoad.keySet())
 			{
+//				if(heartbeat_hashmap.get(rmUrl) > 30000){
+//					set load to max
+//					set jobs of that gsn elsewhere
+//				}else{}
 				ControlMessage cMessage = new ControlMessage(ControlMessageType.RequestLoad);
 				cMessage.setUrl(this.getUrl());
+				cMessage.setAdress(adrr);
+				cMessage.setPort(portnr);
 				Registry registry;
 				try {
-					registry = LocateRegistry.getRegistry();
+//					System.setProperty("java.rmi.server.hostname", adress.get(rmUrl)); 
+					registry = LocateRegistry.getRegistry(adress.get(rmUrl),port.get(rmUrl));
 					GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(rmUrl);
 					temp.onMessageReceived(cMessage);
 				} catch (RemoteException e) {
@@ -390,8 +454,11 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 						ControlMessage cMessage = new ControlMessage(ControlMessageType.AddJob);
 						cMessage.setJob(job);
 						cMessage.setUrl(url);
+						cMessage.setAdress(adrr);
+						cMessage.setPort(portnr);
 						try {
-							registry = LocateRegistry.getRegistry();
+//							System.setProperty("java.rmi.server.hostname", adress.get(leastLoadedRM)); 
+							registry = LocateRegistry.getRegistry(adress.get(leastLoadedRM),port.get(leastLoadedRM));
 							ResourceManagerInterface temp = (ResourceManagerInterface) registry.lookup(leastLoadedRM);
 							temp.onMessageReceived(cMessage);
 							
@@ -416,7 +483,8 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 					}
 					else{
 						try {
-							registry = LocateRegistry.getRegistry();
+//							System.setProperty("java.rmi.server.hostname", adress.get(leastLoadedNode)); 
+							registry = LocateRegistry.getRegistry(adress.get(leastLoadedNode),port.get(leastLoadedNode));
 							if (leastLoadedNode!=null) {
 								ControlMessage cMessage = new ControlMessage(ControlMessageType.AddJob);
 								job.setNodeToNode();
@@ -449,7 +517,7 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 				}
 			}
 			
-			// sleep
+			
 			try
 			{
 				Thread.sleep(pollSleep);
@@ -497,7 +565,8 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 			cMessage.setUrl(this.getUrl());
 			Registry registry;
 			try {
-				registry = LocateRegistry.getRegistry();
+//				System.setProperty("java.rmi.server.hostname", adress.get(rmUrl)); 
+				registry = LocateRegistry.getRegistry(adress.get(rmUrl),port.get(rmUrl));
 				ResourceManagerInterface temp = (ResourceManagerInterface) registry.lookup(rmUrl);
 				temp.onMessageReceived(cMessage);
 			} catch (RemoteException e) {
@@ -516,7 +585,8 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 			cMessage.setUrl(this.getUrl());
 			Registry registry;
 			try {
-				registry = LocateRegistry.getRegistry();
+//				System.setProperty("java.rmi.server.hostname", adress.get(rmUrl)); 
+				registry = LocateRegistry.getRegistry(adress.get(rmUrl),port.get(rmUrl));
 				GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(rmUrl);
 				temp.onMessageReceived(cMessage);
 			} catch (RemoteException e) {
@@ -541,7 +611,8 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 		{
 			Registry registry;
 			try {
-				registry = LocateRegistry.getRegistry();
+//				System.setProperty("java.rmi.server.hostname", adress.get(bro_url)); 
+				registry = LocateRegistry.getRegistry(adress.get(bro_url),port.get(bro_url));
 				GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(bro_url);
 				temp.onMessageReceived(cMessage);
 			} catch (RemoteException e) {
@@ -558,17 +629,22 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 		//record recovery time
 	}
 	
-	public void connectToGridScheduler(String gridSchedulerURL) throws RemoteException, NotBoundException, InterruptedException {
+	public void connectToGridScheduler(String gridSchedulerURL, String adress, int port) throws RemoteException, NotBoundException, InterruptedException {
 
 		// preconditions
 		assert(gridSchedulerURL != null) : "the parameter 'gridSchedulerURL' cannot be null"; 
 
 		gridScheduler.add(gridSchedulerURL);
+		this.adress.put(gridSchedulerURL, adress);
+		this.port.put(gridSchedulerURL, port);
 		NodeLoad.put(gridSchedulerURL, Integer.MAX_VALUE);
 		ControlMessage message = new ControlMessage(ControlMessageType.GridSchedulerNodeJoin);
 		message.setUrl(url);
+		message.setAdress(this.adrr);
+		message.setPort(portnr);
 		
-		Registry registry = LocateRegistry.getRegistry();
+//		System.setProperty("java.rmi.server.hostname", adress); 
+		Registry registry = LocateRegistry.getRegistry(adress,port);
 		GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
 		temp.onMessageReceived(message);
 

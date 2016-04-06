@@ -7,7 +7,7 @@ package distributed.systems.gridscheduler.model;
  * status is <i>busy</i>, indicating that it cannot accept another job. Finally, a node can also be <i>down</i> due
  * to technical failure.    
  * 
- * @author Niels brouwers edited by Carlo van der Valk and Ka-Ping Wan
+ * @author Niels brouwers edited by Carlo van der Valk 
  * @see Node
  *
  */

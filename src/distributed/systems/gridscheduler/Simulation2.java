@@ -20,7 +20,7 @@ import distributed.systems.gridscheduler.model.Job;
  * a new job is added to first cluster. As this cluster is swarmed with jobs, it offloads
  * some of them to the grid scheduler, wich in turn passes them to the other clusters.
  * 
- * @author Niels Brouwers, Boaz Pat-El edited by Carlo van der Valk and Ka-Ping Wan
+ * @author Niels Brouwers, Boaz Pat-El edited by Carlo van der Valk
  */
 public class Simulation2 implements Runnable {
 
@@ -34,68 +34,68 @@ public class Simulation2 implements Runnable {
 	 */
 	public static void main(String[] args) throws RemoteException, NotBoundException, AlreadyBoundException, InterruptedException {
 		// Create and run the simulation
-		try {
-			java.rmi.registry.LocateRegistry.createRegistry(1099);
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		}
+//		try {
+//			java.rmi.registry.LocateRegistry.createRegistry(1099);
+//		} catch (RemoteException e) {
+//			e.printStackTrace();
+//		}
 		
 		List<Cluster> clusters = new ArrayList<Cluster>();
 		
-		GridSchedulerNode node1 = new GridSchedulerNode("Node1");
-		GridSchedulerNode node2 = new GridSchedulerNode("Node2");
-		GridSchedulerNode node3 = new GridSchedulerNode("Node3");
-		GridSchedulerNode node4 = new GridSchedulerNode("Node4");
-		GridSchedulerNode node5 = new GridSchedulerNode("Node5");
+		GridSchedulerNode node1 = new GridSchedulerNode("Node1", "localhost", 1099);
+		GridSchedulerNode node2 = new GridSchedulerNode("Node2", "localhost", 1100);
+		GridSchedulerNode node3 = new GridSchedulerNode("Node3", "localhost", 1101);
+		GridSchedulerNode node4 = new GridSchedulerNode("Node4", "localhost", 1102);
+		GridSchedulerNode node5 = new GridSchedulerNode("Node5", "localhost", 1103);
 		 // Bind the remote object's stub in the registry
-	    Registry registry = LocateRegistry.getRegistry();
-	    
-		registry.bind("Node1", node1);
-		registry.bind("Node2", node2);
-		registry.bind("Node3", node3);
-		registry.bind("Node4", node4);
-		registry.bind("Node5", node5);
+//	    Registry registry = LocateRegistry.getRegistry();
+//	    
+//		registry.bind("Node1", node1);
+//		registry.bind("Node2", node2);
+//		registry.bind("Node3", node3);
+//		registry.bind("Node4", node4);
+//		registry.bind("Node5", node5);
 		
-		node1.connectToGridScheduler("Node2");
-		node2.connectToGridScheduler("Node3");
-		node3.connectToGridScheduler("Node4");
-		node4.connectToGridScheduler("Node5");
-		node5.connectToGridScheduler("Node1");
+		node1.connectToGridScheduler("Node2", "localhost", 1100);
+		node2.connectToGridScheduler("Node3", "localhost", 1101);
+		node3.connectToGridScheduler("Node4", "localhost", 1102);
+		node4.connectToGridScheduler("Node5", "localhost", 1103);
+		node5.connectToGridScheduler("Node1", "localhost", 1099);
 		
-		node1.connectToGridScheduler("Node3");
-		node1.connectToGridScheduler("Node4");
-		node2.connectToGridScheduler("Node4");
-		node2.connectToGridScheduler("Node5");
-		node3.connectToGridScheduler("Node5");
+		node1.connectToGridScheduler("Node3", "localhost", 1101);
+		node1.connectToGridScheduler("Node4", "localhost", 1102);
+		node2.connectToGridScheduler("Node4", "localhost", 1102);
+		node2.connectToGridScheduler("Node5", "localhost", 1103);
+		node3.connectToGridScheduler("Node5", "localhost", 1103);
 		
-		Cluster cluster1 = new Cluster("cluster1", "Node1", 32);
-		Cluster cluster2 = new Cluster("cluster2", "Node1", 32);
-		Cluster cluster3 = new Cluster("cluster3", "Node1", 32);
-		Cluster cluster4 = new Cluster("cluster4", "Node1", 32);//128
+		Cluster cluster1 = new Cluster("cluster1", "Node1", 32, "localhost", 1104, "localhost", 1099);
+		Cluster cluster2 = new Cluster("cluster2", "Node1", 32, "localhost", 1105, "localhost", 1099);
+		Cluster cluster3 = new Cluster("cluster3", "Node1", 32,"localhost", 1106, "localhost", 1099);
+		Cluster cluster4 = new Cluster("cluster4", "Node1", 32,"localhost", 1107, "localhost", 1099);//128
 		clusters.add(cluster1);clusters.add(cluster2);clusters.add(cluster3);clusters.add(cluster4);
 		
-		Cluster cluster5 = new Cluster("cluster5", "Node2", 64);
-		Cluster cluster6 = new Cluster("cluster6", "Node2", 64);
-		Cluster cluster7 = new Cluster("cluster7", "Node2", 64);
-		Cluster cluster8 = new Cluster("cluster8", "Node2", 64);//256
+		Cluster cluster5 = new Cluster("cluster5", "Node2", 64, "localhost", 1108, "localhost", 1100);
+		Cluster cluster6 = new Cluster("cluster6", "Node2", 64, "localhost", 1109, "localhost", 1100);
+		Cluster cluster7 = new Cluster("cluster7", "Node2", 64, "localhost", 1110, "localhost", 1100);
+		Cluster cluster8 = new Cluster("cluster8", "Node2", 64, "localhost", 1111, "localhost", 1100);//256
 		clusters.add(cluster5);clusters.add(cluster6);clusters.add(cluster7);clusters.add(cluster8);
 		
-		Cluster cluster9 = new Cluster("cluster9", "Node3", 32);
-		Cluster cluster10 = new Cluster("cluster10", "Node3", 32);
-		Cluster cluster11 = new Cluster("cluster11", "Node3", 64);
-		Cluster cluster12 = new Cluster("cluster12", "Node3", 64);//192
+		Cluster cluster9 = new Cluster("cluster9", "Node3", 32, "localhost", 1112, "localhost", 1101);
+		Cluster cluster10 = new Cluster("cluster10", "Node3", 32, "localhost", 1113, "localhost", 1101);
+		Cluster cluster11 = new Cluster("cluster11", "Node3", 64, "localhost", 1114, "localhost", 1101);
+		Cluster cluster12 = new Cluster("cluster12", "Node3", 64, "localhost", 1115, "localhost", 1101);//192
 		clusters.add(cluster9);clusters.add(cluster10);clusters.add(cluster11);clusters.add(cluster12);
 		
-		Cluster cluster13 = new Cluster("cluster13", "Node4", 32);
-		Cluster cluster14 = new Cluster("cluster14", "Node4", 32);
-		Cluster cluster15 = new Cluster("cluster15", "Node4", 64);
-		Cluster cluster16 = new Cluster("cluster16", "Node4", 128);//256
+		Cluster cluster13 = new Cluster("cluster13", "Node4", 32, "localhost", 1116, "localhost", 1102);
+		Cluster cluster14 = new Cluster("cluster14", "Node4", 32, "localhost", 1117, "localhost", 1102);
+		Cluster cluster15 = new Cluster("cluster15", "Node4", 64, "localhost", 1118, "localhost", 1102);
+		Cluster cluster16 = new Cluster("cluster16", "Node4", 128, "localhost", 1119, "localhost", 1102);//256
 		clusters.add(cluster13);clusters.add(cluster14);clusters.add(cluster15);clusters.add(cluster16);
 
-		Cluster cluster17 = new Cluster("cluster17", "Node5", 32);
-		Cluster cluster18 = new Cluster("cluster18", "Node5", 32);
-		Cluster cluster19 = new Cluster("cluster19", "Node5", 128);
-		Cluster cluster20 = new Cluster("cluster20", "Node5", 128);//320
+		Cluster cluster17 = new Cluster("cluster17", "Node5", 32, "localhost", 1120, "localhost", 1103);
+		Cluster cluster18 = new Cluster("cluster18", "Node5", 32, "localhost", 1121, "localhost", 1103);
+		Cluster cluster19 = new Cluster("cluster19", "Node5", 128, "localhost", 1122, "localhost", 1103);
+		Cluster cluster20 = new Cluster("cluster20", "Node5", 128, "localhost", 1123, "localhost", 1103);//320
 		clusters.add(cluster17);clusters.add(cluster18);clusters.add(cluster19);clusters.add(cluster20);
 		
 		int xtrajobs = 0;

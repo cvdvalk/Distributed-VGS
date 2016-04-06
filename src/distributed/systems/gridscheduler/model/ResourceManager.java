@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * 
  * Of course, this scheme is totally open to revision.
  * 
- * @author Niels Brouwers, Boaz Pat-El edited by Carlo van der Valk and Ka-Ping Wan
+ * @author Niels Brouwers, Boaz Pat-El edited by Carlo van der Valk
  *
  */
 public class ResourceManager extends UnicastRemoteObject implements INodeEventHandler, ResourceManagerInterface {
@@ -42,6 +42,10 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 	private AtomicLong time;
 	private AtomicInteger completions;
 	private List<Long> pirateList;
+	private String adress;
+	private int port;
+	private String nodeAdress;
+	private int nodePort;
 
 	// Scheduler url
 	private String gridSchedulerURL = null;
@@ -56,7 +60,7 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 	 * </DL>
 	 * @param cluster the cluster to wich this resource manager belongs.
 	 */
-	public ResourceManager(Cluster cluster)	throws RemoteException{
+	public ResourceManager(Cluster cluster, String adress, int port)	throws RemoteException{
 		// preconditions
 		assert(cluster != null);
 		System.out.println("Creating ResourceManager: "+ cluster.getName());
@@ -67,6 +71,8 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		completed = "";
 		load = 0;
 		time = new AtomicLong(0);
+		this.port =port;
+		this.adress = adress;
 		// Number of jobs in the queue must be larger than the number of nodes, because
 		// jobs are kept in queue until finished. The queue is a bit larger than the 
 		// number of nodes for efficiency reasons - when there are only a few more jobs than
@@ -102,8 +108,12 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		ControlMessage notificationMessage = new ControlMessage(ControlMessageType.JobArrival);
 		notificationMessage.setJob(job);
 		notificationMessage.setUrl(socketURL);
+		notificationMessage.setAdress(adress);
+		notificationMessage.setPort(port);
 		notificationMessage.setFromCluster(true);
-		Registry registry = LocateRegistry.getRegistry();
+		
+//		System.setProperty("java.rmi.server.hostname", nodeAdress); 
+		Registry registry = LocateRegistry.getRegistry(nodeAdress,nodePort);
 		GridSchedulerNodeInterface temp1 = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
 		temp1.onMessageReceived(notificationMessage);
 		
@@ -113,7 +123,11 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 			ControlMessage controlMessage = new ControlMessage(ControlMessageType.AddJob);
 			controlMessage.setJob(job);
 			controlMessage.setUrl(socketURL);
-			registry = LocateRegistry.getRegistry();
+			controlMessage.setAdress(adress);
+			controlMessage.setPort(port);
+			
+//			System.setProperty("java.rmi.server.hostname", nodeAdress); 
+			registry = LocateRegistry.getRegistry(nodeAdress,nodePort);
 			GridSchedulerNodeInterface temp2 = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
 			temp2.onMessageReceived(controlMessage);
 
@@ -179,12 +193,15 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		//notify gsn that job was completed
 		ControlMessage notificationMessage = new ControlMessage(ControlMessageType.JobCompletion);
 		notificationMessage.setUrl(socketURL);
+		notificationMessage.setAdress(adress);
+		notificationMessage.setPort(port);
 		notificationMessage.setJob(job);
 		notificationMessage.setFromCluster(true);
 		
 		Registry registry;
 		try {
-			registry = LocateRegistry.getRegistry();
+//			System.setProperty("java.rmi.server.hostname", nodeAdress); 
+			registry = LocateRegistry.getRegistry(nodeAdress,nodePort);
 			GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
 			temp.onMessageReceived(notificationMessage);
 		} catch (RemoteException e) {
@@ -216,18 +233,22 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 	 * @throws NotBoundException 
 	 * @throws InterruptedException 
 	 */
-	public void connectToGridScheduler(String gridSchedulerURL) throws RemoteException, NotBoundException, InterruptedException {
+	public void connectToGridScheduler(String gridSchedulerURL, String nodeAdress, int nodePort) throws RemoteException, NotBoundException, InterruptedException {
 
 		// preconditions
 		assert(gridSchedulerURL != null) : "the parameter 'gridSchedulerURL' cannot be null"; 
 
 		this.gridSchedulerURL = gridSchedulerURL;
-
+		this.nodeAdress=nodeAdress;
+		this.nodePort=nodePort;
 		ControlMessage message = new ControlMessage(ControlMessageType.ResourceManagerJoin);
 		message.setUrl(socketURL);
+		message.setAdress(adress);
+		message.setPort(port);
 		message.setMax(jobQueueSize);
 		
-		Registry registry = LocateRegistry.getRegistry();
+//		System.setProperty("java.rmi.server.hostname", nodeAdress); 
+		Registry registry = LocateRegistry.getRegistry(nodeAdress,nodePort);
 		GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
 		temp.onMessageReceived(message);
 	}
@@ -259,13 +280,14 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 			ControlMessage notificationMessage = new ControlMessage(ControlMessageType.JobArrival);
 			notificationMessage.setJob(controlMessage.getJob());
 			notificationMessage.setUrl(socketURL);
+			notificationMessage.setAdress(adress);
+			notificationMessage.setPort(port);
 			notificationMessage.setFromCluster(true);
-			Registry registry = LocateRegistry.getRegistry();
+			
+//			System.setProperty("java.rmi.server.hostname", nodeAdress); 
+			Registry registry = LocateRegistry.getRegistry(nodeAdress,nodePort);
 			GridSchedulerNodeInterface temp1 = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
 			temp1.onMessageReceived(notificationMessage);
-			
-			
-			
 			
 			scheduleJobs();
 			
@@ -278,7 +300,11 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 			ControlMessage replyMessage = new ControlMessage(ControlMessageType.ReplyLoad);
 			replyMessage.setUrl(cluster.getName());
 			replyMessage.setLoad(jobQueue.size());
-			Registry registry = LocateRegistry.getRegistry();
+			replyMessage.setAdress(adress);
+			replyMessage.setPort(port);
+			
+//			System.setProperty("java.rmi.server.hostname", nodeAdress); 
+			Registry registry = LocateRegistry.getRegistry(nodeAdress,nodePort);
 			GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
 			temp.onMessageReceived(replyMessage);
 			
@@ -315,9 +341,10 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 			long q3 = getMedian(Arrays.copyOfRange(test, middle, pirateList.size()-1));
 			long average = time.get() / completions.get();
 			
-			all_data  = socketURL + "" + all_data;
+			all_data  = socketURL + "=[" + all_data + "]";
 			
 //			return all_data;
+//			return socketURL + "=" + pirateList.size();
 			return socketURL + "," + "" + completions.get() 
 					+ "," + average 
 					+ "," + min
@@ -334,10 +361,13 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		
 		ControlMessage replyMessage = new ControlMessage(ControlMessageType.NodeStart);
 		replyMessage.setUrl(socketURL);
+		replyMessage.setAdress(adress);
+		replyMessage.setPort(port);
 		replyMessage.setFromCluster(true);
 		Registry registry;
 		try {
-			registry = LocateRegistry.getRegistry();
+//			System.setProperty("java.rmi.server.hostname", nodeAdress); 
+			registry = LocateRegistry.getRegistry(nodeAdress,nodePort);
 			GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
 			temp.onMessageReceived(replyMessage);
 		} catch (RemoteException e) {

@@ -7,7 +7,7 @@ import java.util.ArrayList;
  * 
  * This class represents a Node within a virtual cluster. Nodes can run jobs, go up and go down. 
  * 
- * @author Niels Brouwers edited by Carlo van der Valk and Ka-Ping Wan
+ * @author Niels Brouwers edited by Carlo van der Valk
  *
  */
 public class Node {

@@ -4,7 +4,7 @@ package distributed.systems.gridscheduler.model;
  * 
  * Different types of control messages. Feel free to add new message types if you need any. 
  * 
- * @author Niels Brouwers edited by Carlo van der Valk and Ka-Ping Wan
+ * @author Niels Brouwers edited by Carlo van der Valk
  *
  */
 public enum ControlMessageType {

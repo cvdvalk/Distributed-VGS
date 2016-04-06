@@ -10,7 +10,7 @@ import java.io.Serializable;
  * facilitate the passing of common arguments. Feel free to expand it and adapt it to your 
  * needs. 
  * 
- * @author Niels Brouwers edited by Carlo van der Valk and Ka-Ping Wan
+ * @author Niels Brouwers edited by Carlo van der Valk
  *
  */
 public class ControlMessage implements Serializable{
@@ -26,6 +26,8 @@ public class ControlMessage implements Serializable{
 	private int load;
 	private int max;
 	private boolean fromCluster;
+	private String adress;
+	private int port;
 	
 	/**
 	 * Constructs a new ControlMessage object
@@ -103,6 +105,22 @@ public class ControlMessage implements Serializable{
 	
 	public boolean fromCluster(){
 		return fromCluster;
+	}
+	
+	public void setAdress(String adress){
+		this.adress=adress;
+	}
+	
+	public String getAdress(){
+		return adress;
+	}
+	
+	public void setPort(int port){
+		this.port = port;
+	}
+	
+	public int getPort(){
+		return port;
 	}
 
 
