@@ -30,17 +30,16 @@ public class Simulation3 implements Runnable {
 	 */
 	public static void main(String[] args) throws RemoteException, NotBoundException, AlreadyBoundException, InterruptedException {
 		
-		List<Cluster> clusters = new ArrayList<Cluster>();
 		
-		GridSchedulerNode node1 = new GridSchedulerNode("Node1", "localhost", 1099);
+		GridSchedulerNode node1 = new GridSchedulerNode("Node1", "192.168.1.126", 1099);
 //		GridSchedulerNode node2 = new GridSchedulerNode("Node2", "localhost", 1100);
 		
-		node1.connectToGridScheduler("Node2", "localhost", 1100);
+		node1.connectToGridScheduler("Node2", "192.168.1.106", 1100);
 
-		Cluster cluster1 = new Cluster("cluster1", "Node1", 32, "localhost", 1104, "localhost", 1099);
-		Cluster cluster2 = new Cluster("cluster2", "Node1", 32, "localhost", 1105, "localhost", 1099);
-		Cluster cluster3 = new Cluster("cluster3", "Node1", 32,"localhost", 1106, "localhost", 1099);
-		Cluster cluster4 = new Cluster("cluster4", "Node1", 32,"localhost", 1107, "localhost", 1099);//128
+		Cluster cluster1 = new Cluster("cluster1", "Node1", 32, "192.168.1.126", 1104, "192.168.1.126", 1099);
+//		Cluster cluster2 = new Cluster("cluster2", "Node1", 32, "192.168.1.126", 1105, "192.168.1.126", 1099);
+//		Cluster cluster3 = new Cluster("cluster3", "Node1", 32,"192.168.1.126", 1106, "192.168.1.126", 1099);
+//		Cluster cluster4 = new Cluster("cluster4", "Node1", 32,"192.168.1.126", 1107, "192.168.1.126", 1099);//128
 		
 //		Cluster cluster5 = new Cluster("cluster5", "Node2", 64, "localhost", 1108, "localhost", 1100);
 //		Cluster cluster6 = new Cluster("cluster6", "Node2", 64, "localhost", 1109, "localhost", 1100);

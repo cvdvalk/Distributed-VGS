@@ -67,7 +67,7 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 			System.setProperty("java.rmi.server.hostname", adress); 
 			java.rmi.registry.LocateRegistry.createRegistry(port);
 		} catch (RemoteException e) {
-			e.printStackTrace();
+			//e.printStackTrace();
 		}
 		Registry registry = LocateRegistry.getRegistry(port);
 		// init members
@@ -152,7 +152,7 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 			this.adress.put(controlMessage.getUrl(), controlMessage.getAdress());
 			heartbeat_hashmap.put(controlMessage.getUrl(), new Date());
 			NodeLoad.put(controlMessage.getUrl(), Integer.MAX_VALUE);
-//			System.out.println("added node: "+controlMessage.getUrl());
+			System.out.println("added node: "+controlMessage.getUrl());
 		}
 		
 		
@@ -183,12 +183,15 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 						GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(bro_url);
 						temp.onMessageReceived(cMessage);
 					} catch (RemoteException e) {
-						e.printStackTrace();
+						////e.printStackTrace();
 					} catch (NotBoundException e) {
-						e.printStackTrace();
+						//e.printStackTrace();
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
-						e.printStackTrace();
+						//e.printStackTrace();
+					} 
+					catch(Exception e){
+						
 					}
 				}
 				
@@ -226,14 +229,17 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 				GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(controlMessage.getUrl());
 				temp.onMessageReceived(cMessage);
 			} catch (RemoteException e) {
-				e.printStackTrace();
+				//e.printStackTrace();
 			} catch (NotBoundException e) {
-//				e.printStackTrace();
+//				//e.printStackTrace();
 				System.out.println(controlMessage.getUrl() + " has crashed");
 				NodeLoad.put(controlMessage.getUrl(), Integer.MAX_VALUE);
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				//e.printStackTrace();
+			}
+			catch(Exception e){
+				
 			}
 		}
 		//receive the load to other RM
@@ -263,12 +269,15 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 						GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(bro_url);
 						temp.onMessageReceived(controlMessage);
 					} catch (RemoteException e) {
-						e.printStackTrace();
+						//e.printStackTrace();
 					} catch (NotBoundException e) {
-						e.printStackTrace();
+						//e.printStackTrace();
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
-						e.printStackTrace();
+						//e.printStackTrace();
+					}
+					catch(Exception e){
+						
 					}
 				}
 			}
@@ -292,12 +301,15 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 						GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(bro_url);
 						temp.onMessageReceived(controlMessage);
 					} catch (RemoteException e) {
-						e.printStackTrace();
+						//e.printStackTrace();
 					} catch (NotBoundException e) {
-						e.printStackTrace();
+						//e.printStackTrace();
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
-						e.printStackTrace();
+						//e.printStackTrace();
+					} 
+					catch (Exception e){
+						
 					}
 				}
 			}
@@ -330,12 +342,15 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 							
 							
 						}catch (RemoteException e) {
-						e.printStackTrace();
+						//e.printStackTrace();
 						} catch (NotBoundException e) {
-							e.printStackTrace();
+							//e.printStackTrace();
 						} catch (InterruptedException e) {
 							// TODO Auto-generated catch block
-							e.printStackTrace();
+							//e.printStackTrace();
+						}
+						catch(Exception e){
+							
 						}
 					}
 				}
@@ -355,12 +370,15 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 				GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(controlMessage.getUrl());
 				temp.onMessageReceived(cMessage);
 			} catch (RemoteException e) {
-				e.printStackTrace();
+				//e.printStackTrace();
 			} catch (NotBoundException e) {
-				e.printStackTrace();
+				//e.printStackTrace();
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				//e.printStackTrace();
+			}
+			catch(Exception e){
+				
 			}
 		}
 		//
@@ -440,12 +458,15 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 					ResourceManagerInterface temp = (ResourceManagerInterface) registry.lookup(rmUrl);
 					temp.onMessageReceived(cMessage);
 				} catch (RemoteException e) {
-					e.printStackTrace();
+					//e.printStackTrace();
 				} catch (NotBoundException e) {
-					e.printStackTrace();
+					//e.printStackTrace();
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
-					e.printStackTrace();
+					//e.printStackTrace();
+				}
+				catch(Exception e){
+					
 				}
 			}
 			for (String rmUrl : NodeLoad.keySet())
@@ -461,19 +482,23 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 					GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(rmUrl);
 					temp.onMessageReceived(cMessage);
 				} catch (RemoteException e) {
-					e.printStackTrace();
+					//e.printStackTrace();
 				} catch (NotBoundException e) {
-					e.printStackTrace();
+					//e.printStackTrace();
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
-					e.printStackTrace();
+					//e.printStackTrace();
+				}
+				catch(Exception e){
+					
 				}
 			}
 			
 			for (String rmUrl : resourceManagerLoad.keySet())
 			{
-				if(new Date().getTime() - heartbeat_hashmap.get(rmUrl).getTime() > 30000){
+				if(new Date().getTime() - heartbeat_hashmap.get(rmUrl).getTime() > 5000){
 					resourceManagerLoad.put(rmUrl, Integer.MAX_VALUE);
+					System.out.println(rmUrl + " is down");
 //					set load to max
 //					set jobs of that rm, in my queue
 				}else{
@@ -488,19 +513,22 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 						ResourceManagerInterface temp = (ResourceManagerInterface) registry.lookup(rmUrl);
 						temp.onMessageReceived(cMessage);
 					} catch (RemoteException e) {
-						e.printStackTrace();
+						//e.printStackTrace();
 					} catch (NotBoundException e) {
-						e.printStackTrace();
+						//e.printStackTrace();
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
-						e.printStackTrace();
+						//e.printStackTrace();
+					}
+						catch(Exception e){
+						
 					}
 				}
 				
 			}
 			for (String rmUrl : NodeLoad.keySet())
 			{
-				if(new Date().getTime() - heartbeat_hashmap.get(rmUrl).getTime() > 30000){
+				if(new Date().getTime() - heartbeat_hashmap.get(rmUrl).getTime() > 5000){
 					NodeLoad.put(rmUrl, Integer.MAX_VALUE);
 					System.out.println(rmUrl + " is down");
 	//				set load to max
@@ -517,12 +545,15 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 						GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(rmUrl);
 						temp.onMessageReceived(cMessage);
 					} catch (RemoteException e) {
-						e.printStackTrace();
+						//e.printStackTrace();
 					} catch (NotBoundException e) {
-						e.printStackTrace();
+						//e.printStackTrace();
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
-						e.printStackTrace();
+						//e.printStackTrace();
+					}
+						catch(Exception e){
+						
 					}
 				}
 			}
@@ -548,12 +579,15 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 							ResourceManagerInterface temp = (ResourceManagerInterface) registry.lookup(leastLoadedRM);
 							temp.onMessageReceived(cMessage);
 						} catch (RemoteException e) {
-							e.printStackTrace();
+							//e.printStackTrace();
 						} catch (NotBoundException e) {
-							e.printStackTrace();
+							//e.printStackTrace();
 						} catch (InterruptedException e) {
 							// TODO Auto-generated catch block
-							e.printStackTrace();
+							//e.printStackTrace();
+						}
+						catch(Exception e){
+							
 						}
 						jobQueue.remove(job);
 						
@@ -589,11 +623,14 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 							}
 							
 						} catch (RemoteException e) {
-							e.printStackTrace();
+							//e.printStackTrace();
 						} catch (NotBoundException e) {
-							e.printStackTrace();
+							//e.printStackTrace();
 						} catch (InterruptedException e) {
-							e.printStackTrace();
+							//e.printStackTrace();
+						}
+						catch(Exception e){
+							
 						}
 					}
 					
@@ -653,12 +690,15 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 				ResourceManagerInterface temp = (ResourceManagerInterface) registry.lookup(rmUrl);
 				temp.onMessageReceived(cMessage);
 			} catch (RemoteException e) {
-				e.printStackTrace();
+				//e.printStackTrace();
 			} catch (NotBoundException e) {
-				e.printStackTrace();
+				//e.printStackTrace();
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				//e.printStackTrace();
+			}
+			catch(Exception e){
+				
 			}
 			
 		}
@@ -673,12 +713,15 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 				GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(rmUrl);
 				temp.onMessageReceived(cMessage);
 			} catch (RemoteException e) {
-				e.printStackTrace();
+				//e.printStackTrace();
 			} catch (NotBoundException e) {
-				e.printStackTrace();
+				//e.printStackTrace();
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				//e.printStackTrace();
+			}
+			catch(Exception e){
+				
 			}
 		}
 		
@@ -699,12 +742,15 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 				GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(bro_url);
 				temp.onMessageReceived(cMessage);
 			} catch (RemoteException e) {
-				e.printStackTrace();
+				//e.printStackTrace();
 			} catch (NotBoundException e) {
-				e.printStackTrace();
+				//e.printStackTrace();
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				//e.printStackTrace();
+			}
+			catch(Exception e){
+				
 			}
 		}
 		

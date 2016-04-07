@@ -178,7 +178,7 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		// preconditions
 		assert(job != null) : "parameter 'job' cannot be null";
 		job.setTimeCompleted();
-//		System.out.println(job.toString());
+		System.out.println(job.toString());
 		long t = (long) (job.getTimeCompleted().getTime() - job.getTimeArrived().getTime() - job.getDuration());
 		time.addAndGet( t );
 		// job finished, remove it from our pool
@@ -206,13 +206,16 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 			temp.onMessageReceived(notificationMessage);
 		} catch (RemoteException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			//e.printStackTrace();
 		} catch (NotBoundException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			//e.printStackTrace();
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			//e.printStackTrace();
+		}
+		catch(Exception e){
+			
 		}
 		
 	}
@@ -307,9 +310,9 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 			Registry registry = LocateRegistry.getRegistry(nodeAdress,nodePort);
 			GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
 			temp.onMessageReceived(replyMessage);
-			if(controlMessage.getUrl().equals("Node3")){
-				System.out.println("Node3 lives");
-			}
+//			if(controlMessage.getUrl().equals("Node3")){
+//				System.out.println("Node3 lives");
+//			}
 		}
 		//
 //		if(Math.random() * 1000 <= 1){
@@ -331,12 +334,15 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 				GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(controlMessage.getUrl());
 				temp.onMessageReceived(cMessage);
 			} catch (RemoteException e) {
-				e.printStackTrace();
+				//e.printStackTrace();
 			} catch (NotBoundException e) {
-				e.printStackTrace();
+				//e.printStackTrace();
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				//e.printStackTrace();
+			}
+			catch(Exception e){
+				
 			}
 		}
 	}
@@ -395,13 +401,16 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 			temp.onMessageReceived(replyMessage);
 		} catch (RemoteException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			//e.printStackTrace();
 		} catch (NotBoundException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			//e.printStackTrace();
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			//e.printStackTrace();
+		}
+		catch(Exception e){
+			
 		}
 	}
 	
