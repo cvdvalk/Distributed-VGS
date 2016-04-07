@@ -178,7 +178,7 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		// preconditions
 		assert(job != null) : "parameter 'job' cannot be null";
 		job.setTimeCompleted();
-		System.out.println(job.toString());
+//		System.out.println(job.toString());
 		long t = (long) (job.getTimeCompleted().getTime() - job.getTimeArrived().getTime() - job.getDuration());
 		time.addAndGet( t );
 		// job finished, remove it from our pool
@@ -307,14 +307,37 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 			Registry registry = LocateRegistry.getRegistry(nodeAdress,nodePort);
 			GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(gridSchedulerURL);
 			temp.onMessageReceived(replyMessage);
-			
-			//System.out.println(toString());
+			if(controlMessage.getUrl().equals("Node3")){
+				System.out.println("Node3 lives");
+			}
 		}
 		//
-		if(Math.random() * 1000 <= 1){
-			System.out.println(socketURL + ": crashed" );
-			Crash();
-			return;
+//		if(Math.random() * 1000 <= 1){
+//			System.out.println(socketURL + ": crashed" );
+//			Crash();
+//			return;
+//		}
+		//
+		//
+		if(controlMessage.getType() == ControlMessageType.HeartBeat){
+			ControlMessage cMessage = new ControlMessage(ControlMessageType.HeartBeatReply);
+			cMessage.setUrl(socketURL);
+			cMessage.setAdress(adress);
+			cMessage.setPort(port);
+			Registry registry;
+			try {
+//				System.setProperty("java.rmi.server.hostname", adress.get(rmUrl)); 
+				registry = LocateRegistry.getRegistry(controlMessage.getAdress(),controlMessage.getPort());
+				GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(controlMessage.getUrl());
+				temp.onMessageReceived(cMessage);
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			} catch (NotBoundException e) {
+				e.printStackTrace();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 	
@@ -344,14 +367,14 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 			all_data  = socketURL + "=[" + all_data + "]";
 			
 //			return all_data;
-//			return socketURL + "=" + pirateList.size();
-			return socketURL + "," + "" + completions.get() 
-					+ "," + average 
-					+ "," + min
-					+ "," + q1
-					+ "," + median
-					+ "," + q3
-					+ "," + max;
+			return socketURL + "=" + pirateList.size();
+//			return socketURL + "," + "" + completions.get() 
+//					+ "," + average 
+//					+ "," + min
+//					+ "," + q1
+//					+ "," + median
+//					+ "," + q3
+//					+ "," + max;
 		}
 		return "";
 	}

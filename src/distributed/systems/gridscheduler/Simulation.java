@@ -121,6 +121,10 @@ public class Simulation implements Runnable {
 					c.getResourceManager().addJob(job_temp);
 				}
 			}
+			if(i==100){
+				System.out.println("Node3 crash");
+				node3.NodeCrash();
+			}
 			try {
 				// Sleep a while before creating a new job
 				Thread.sleep(100L);
