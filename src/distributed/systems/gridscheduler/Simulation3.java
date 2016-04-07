@@ -47,7 +47,7 @@ public class Simulation3 implements Runnable {
 //		Cluster cluster8 = new Cluster("cluster8", "Node2", 64, "localhost", 1111, "localhost", 1100);//256
 		
 		int xtrajobs = 0;
-		int jobsNumber = 1550;
+		int jobsNumber = 100;
 		for(int i = 0;i < jobsNumber;i++){
 			Job job = new Job(8000 + (int)(Math.random() * 5000), i);
 			cluster1.getResourceManager().addJob(job);

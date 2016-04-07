@@ -40,6 +40,7 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 	private ConcurrentHashMap<String, Date> heartbeat_hashmap;
 	private ConcurrentHashMap<Long, String> job_log;
 	private ConcurrentHashMap<Long, Job> job_log2;
+	private ConcurrentHashMap<Long, Integer> elect;
 	// polling frequency, 1hz
 	private long pollSleep = 1000;
 	
@@ -82,6 +83,7 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 		this.port = new ConcurrentHashMap<String, Integer>();
 		this.adress = new ConcurrentHashMap<String, String>();
 		this.gridScheduler = new ArrayList<String>();
+		elect = new ConcurrentHashMap<Long, Integer>();
 		heartbeat_hashmap = new ConcurrentHashMap<String, Date>();
 		job_log = new ConcurrentHashMap<Long, String>();
 		job_log2 = new ConcurrentHashMap<Long, Job>();
@@ -385,12 +387,83 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 		if(controlMessage.getType() == ControlMessageType.HeartBeatReply){
 			heartbeat_hashmap.put(controlMessage.getUrl(),new Date());
 		}
-		//if receive heartbeat
-			//reply heartbeatreply
-		
 		//
-		//if receive heartbeat reply
-			//set heartbeat timer of senderurl to 0
+		if(controlMessage.getType() == ControlMessageType.Election){
+			//if election criteria true, the node that sent this should win
+				//send electionreply
+			//if i should 
+			if(controlMessage.getUrl().compareTo(url) > 0){
+				//send reply
+				ControlMessage cMessage = new ControlMessage(ControlMessageType.ElectionReply);
+				cMessage.setUrl(this.getUrl());
+				cMessage.setAdress(adrr);
+				cMessage.setPort(portnr);
+				Registry registry;
+				try {
+					registry = LocateRegistry.getRegistry(controlMessage.getAdress(),controlMessage.getPort());
+					GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(controlMessage.getUrl());
+					temp.onMessageReceived(cMessage);
+				} catch (RemoteException e) {
+					//e.printStackTrace();
+				} catch (NotBoundException e) {
+					//e.printStackTrace();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					//e.printStackTrace();
+				}
+				catch(Exception e){
+					
+				}
+			}
+			else{
+				//broadcast election message? nah
+			}
+		}
+		//
+		if(controlMessage.getType() == ControlMessageType.ElectionReply){
+			if(elect.get(controlMessage.getJob().getId()) == null){
+				elect.put(controlMessage.getJob().getId(), 1);
+			}else{
+				elect.put(controlMessage.getJob().getId(), elect.get(controlMessage.getJob().getId())+1);
+			}
+			if(elect.get(controlMessage.getJob().getId()) == gridScheduler.size()-1){
+				controlMessage.getJob().addToLog(url);
+				controlMessage.getJob().setLast(url);
+				jobQueue.add(controlMessage.getJob());
+				System.out.println("reclaimed job nr."+ controlMessage.getJob().getId() + "from crashed node");
+				
+				//check if job is in message log
+				job_log.put(controlMessage.getJob().getId(), controlMessage.getUrl());
+				job_log2.put(controlMessage.getJob().getId(), controlMessage.getJob());
+				
+				//jobArrived broadcast
+				for (String bro_url : gridScheduler)
+				{
+					ControlMessage cMessage = new ControlMessage(ControlMessageType.JobArrival);
+					cMessage.setUrl(this.getUrl());
+					cMessage.setAdress(this.adrr);
+					cMessage.setPort(portnr);
+					cMessage.setJob(controlMessage.getJob());
+					Registry registry;
+					try {
+						registry = LocateRegistry.getRegistry(adress.get(bro_url),port.get(bro_url));
+						GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(bro_url);
+						temp.onMessageReceived(cMessage);
+					} catch (RemoteException e) {
+						////e.printStackTrace();
+					} catch (NotBoundException e) {
+						//e.printStackTrace();
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						//e.printStackTrace();
+					} 
+					catch(Exception e){
+						
+					}
+				}
+			}
+		}
+		
 //		if(Math.random() * 1000 <= 1){
 //			System.out.println(url + ": crashed" );
 //			NodeCrash();
@@ -496,7 +569,7 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 			
 			for (String rmUrl : resourceManagerLoad.keySet())
 			{
-				if(new Date().getTime() - heartbeat_hashmap.get(rmUrl).getTime() > 5000){
+				if(new Date().getTime() - heartbeat_hashmap.get(rmUrl).getTime() > 5000 && resourceManagerLoad.get(rmUrl) != Integer.MAX_VALUE){
 					resourceManagerLoad.put(rmUrl, Integer.MAX_VALUE);
 					System.out.println(rmUrl + " is down");
 //					set load to max
@@ -528,11 +601,44 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 			}
 			for (String rmUrl : NodeLoad.keySet())
 			{
-				if(new Date().getTime() - heartbeat_hashmap.get(rmUrl).getTime() > 5000){
+				if(new Date().getTime() - heartbeat_hashmap.get(rmUrl).getTime() > 5000 && NodeLoad.get(rmUrl) != Integer.MAX_VALUE){
 					NodeLoad.put(rmUrl, Integer.MAX_VALUE);
 					System.out.println(rmUrl + " is down");
 	//				set load to max
 	//				set jobs of that rm, in my queue
+					for (String inception : NodeLoad.keySet())
+						{
+							if(inception!=rmUrl){
+								for (long key : job_log.keySet())
+								{
+									if(job_log.get(key)!=null){
+										if(job_log.get(key).equals(rmUrl)){
+											ControlMessage cMessage = new ControlMessage(ControlMessageType.Election);
+											cMessage.setUrl(this.getUrl());
+											cMessage.setAdress(adrr);
+											cMessage.setPort(portnr);
+											cMessage.setJob(job_log2.get(key));
+											Registry registry;
+											try {
+												registry = LocateRegistry.getRegistry(adress.get(inception),port.get(inception));
+												GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(inception);
+												temp.onMessageReceived(cMessage);
+											} catch (RemoteException e) {
+												//e.printStackTrace();
+											} catch (NotBoundException e) {
+												//e.printStackTrace();
+											} catch (InterruptedException e) {
+												// TODO Auto-generated catch block
+												//e.printStackTrace();
+											}
+											catch(Exception e){
+												
+											}
+										}
+									}
+								}
+							}
+						}
 				}else{
 					ControlMessage cMessage = new ControlMessage(ControlMessageType.RequestLoad);
 					cMessage.setUrl(this.getUrl());
@@ -611,7 +717,7 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 								GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(leastLoadedNode);
 								temp.onMessageReceived(cMessage);
 								
-								jobQueue.remove(job);
+//								jobQueue.remove(job);
 								
 								jobQueue.remove(job);
 								if( NodeLoad.get(leastLoadedNode)!=null){

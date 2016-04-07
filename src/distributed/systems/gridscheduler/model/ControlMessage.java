@@ -28,6 +28,7 @@ public class ControlMessage implements Serializable{
 	private boolean fromCluster;
 	private String adress;
 	private int port;
+	private String elect;
 	
 	/**
 	 * Constructs a new ControlMessage object
@@ -123,5 +124,12 @@ public class ControlMessage implements Serializable{
 		return port;
 	}
 
+	public void setElect(String elect){
+		this.elect = elect;
+	}
+	
+	public String getElect(){
+		return elect;
+	}
 
 }

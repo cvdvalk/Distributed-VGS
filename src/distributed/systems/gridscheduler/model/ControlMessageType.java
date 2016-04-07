@@ -28,5 +28,7 @@ public enum ControlMessageType {
 	NodeStartReply, 	//from GSN to GSN
 	ReplyToNode,
 	HeartBeat,
-	HeartBeatReply
+	HeartBeatReply,
+	Election,
+	ElectionReply
 }
