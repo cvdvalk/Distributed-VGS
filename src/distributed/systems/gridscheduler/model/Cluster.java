@@ -62,6 +62,7 @@ public class Cluster implements Runnable {
 		resourceManager = new ResourceManager(this, adress, port);
 		
 		try {
+			System.setProperty("java.rmi.server.hostname", adress); 
 			java.rmi.registry.LocateRegistry.createRegistry(port);
 		} catch (RemoteException e) {
 			e.printStackTrace();

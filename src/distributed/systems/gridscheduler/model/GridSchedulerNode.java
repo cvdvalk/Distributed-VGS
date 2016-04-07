@@ -64,6 +64,7 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 		assert(url != null) : "parameter 'url' cannot be null";
 		
 		try {
+			System.setProperty("java.rmi.server.hostname", adress); 
 			java.rmi.registry.LocateRegistry.createRegistry(port);
 		} catch (RemoteException e) {
 			e.printStackTrace();
