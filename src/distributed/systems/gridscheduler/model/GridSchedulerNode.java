@@ -257,7 +257,7 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 				job_log.remove(controlMessage.getJob().getId());
 				job_log2.remove(controlMessage.getJob().getId());
 			}
-			
+			System.out.println(controlMessage.getJob().toString());
 			//check if received from rm, if so broadcast to gsn
 			if(controlMessage.fromCluster()){
 				//broadcast
@@ -606,39 +606,54 @@ public class GridSchedulerNode extends UnicastRemoteObject implements Runnable, 
 					System.out.println(rmUrl + " is down");
 	//				set load to max
 	//				set jobs of that rm, in my queue
-					for (String inception : NodeLoad.keySet())
+					if(NodeLoad.keySet().size() == 1){
+						for (long key : job_log.keySet())
 						{
-							if(inception!=rmUrl){
-								for (long key : job_log.keySet())
-								{
-									if(job_log.get(key)!=null){
-										if(job_log.get(key).equals(rmUrl)){
-											ControlMessage cMessage = new ControlMessage(ControlMessageType.Election);
-											cMessage.setUrl(this.getUrl());
-											cMessage.setAdress(adrr);
-											cMessage.setPort(portnr);
-											cMessage.setJob(job_log2.get(key));
-											Registry registry;
-											try {
-												registry = LocateRegistry.getRegistry(adress.get(inception),port.get(inception));
-												GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(inception);
-												temp.onMessageReceived(cMessage);
-											} catch (RemoteException e) {
-												//e.printStackTrace();
-											} catch (NotBoundException e) {
-												//e.printStackTrace();
-											} catch (InterruptedException e) {
-												// TODO Auto-generated catch block
-												//e.printStackTrace();
-											}
-											catch(Exception e){
-												
+							if(job_log.get(key)!=null){
+								if(job_log.get(key).equals(rmUrl)){
+									System.out.println("salvaged job");
+									job_log2.get(rmUrl).addToLog(url);
+									job_log2.get(rmUrl).setLast(url);
+									job_log.put(key, url);
+									jobQueue.add(job_log2.get(rmUrl));
+								}
+							}
+						}
+					}else{
+						for (String inception : NodeLoad.keySet())
+							{
+								if(inception!=rmUrl){
+									for (long key : job_log.keySet())
+									{
+										if(job_log.get(key)!=null){
+											if(job_log.get(key).equals(rmUrl)){
+												ControlMessage cMessage = new ControlMessage(ControlMessageType.Election);
+												cMessage.setUrl(this.getUrl());
+												cMessage.setAdress(adrr);
+												cMessage.setPort(portnr);
+												cMessage.setJob(job_log2.get(key));
+												Registry registry;
+												try {
+													registry = LocateRegistry.getRegistry(adress.get(inception),port.get(inception));
+													GridSchedulerNodeInterface temp = (GridSchedulerNodeInterface) registry.lookup(inception);
+													temp.onMessageReceived(cMessage);
+												} catch (RemoteException e) {
+													//e.printStackTrace();
+												} catch (NotBoundException e) {
+													//e.printStackTrace();
+												} catch (InterruptedException e) {
+													// TODO Auto-generated catch block
+													//e.printStackTrace();
+												}
+												catch(Exception e){
+													
+												}
 											}
 										}
 									}
 								}
 							}
-						}
+					}
 				}else{
 					ControlMessage cMessage = new ControlMessage(ControlMessageType.RequestLoad);
 					cMessage.setUrl(this.getUrl());

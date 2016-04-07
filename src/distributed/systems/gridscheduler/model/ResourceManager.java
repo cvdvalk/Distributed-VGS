@@ -178,7 +178,7 @@ public class ResourceManager extends UnicastRemoteObject implements INodeEventHa
 		// preconditions
 		assert(job != null) : "parameter 'job' cannot be null";
 		job.setTimeCompleted();
-		System.out.println(job.toString());
+//		System.out.println(job.toString());
 		long t = (long) (job.getTimeCompleted().getTime() - job.getTimeArrived().getTime() - job.getDuration());
 		time.addAndGet( t );
 		// job finished, remove it from our pool

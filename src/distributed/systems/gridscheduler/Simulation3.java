@@ -32,12 +32,14 @@ public class Simulation3 implements Runnable {
 		
 		
 		GridSchedulerNode node1 = new GridSchedulerNode("Node1", "192.168.1.126", 1099);
-//		GridSchedulerNode node2 = new GridSchedulerNode("Node2", "localhost", 1100);
+		GridSchedulerNode node3 = new GridSchedulerNode("Node3", "192.168.1.126", 1100);
 		
 		node1.connectToGridScheduler("Node2", "192.168.1.106", 1100);
-
+		node1.connectToGridScheduler("Node3", "192.168.1.126", 1100);
+		node3.connectToGridScheduler("Node2", "192.168.1.106", 1100);
+		
 		Cluster cluster1 = new Cluster("cluster1", "Node1", 32, "192.168.1.126", 1104, "192.168.1.126", 1099);
-//		Cluster cluster2 = new Cluster("cluster2", "Node1", 32, "192.168.1.126", 1105, "192.168.1.126", 1099);
+		Cluster cluster3 = new Cluster("cluster3", "Node3", 32, "192.168.1.126", 1105, "192.168.1.126", 1100);
 //		Cluster cluster3 = new Cluster("cluster3", "Node1", 32,"192.168.1.126", 1106, "192.168.1.126", 1099);
 //		Cluster cluster4 = new Cluster("cluster4", "Node1", 32,"192.168.1.126", 1107, "192.168.1.126", 1099);//128
 		
