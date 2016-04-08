@@ -1,6 +1,7 @@
 package distributed.systems.gridscheduler.model;
 
 import java.io.Serializable;
+import java.util.Date;
 
 
 
@@ -29,6 +30,8 @@ public class ControlMessage implements Serializable{
 	private String adress;
 	private int port;
 	private String elect;
+	private Date timestamp;
+	private String subject;
 	
 	/**
 	 * Constructs a new ControlMessage object
@@ -130,6 +133,22 @@ public class ControlMessage implements Serializable{
 	
 	public String getElect(){
 		return elect;
+	}
+	
+	public void setTimestamp(Date timestamp){
+		this.timestamp = timestamp;
+	}
+	
+	public Date getTimestamp(){
+		return timestamp;
+	}
+	
+	public void setSubject(String subject){
+		this.subject = subject;
+	}
+	
+	public String getSubject(){
+		return this.subject;
 	}
 
 }

@@ -99,7 +99,7 @@ public class Simulation implements Runnable {
 		clusters.add(cluster17);clusters.add(cluster18);clusters.add(cluster19);
 		
 		int xtrajobs = 0;
-		int jobsNumber = 500;
+		int jobsNumber = 100;
 		for(int i = 0;i < jobsNumber;i++){
 			Job job = new Job(8000 + (int)(Math.random() * 5000), i);
 			cluster1.getResourceManager().addJob(job);
@@ -121,7 +121,7 @@ public class Simulation implements Runnable {
 					c.getResourceManager().addJob(job_temp);
 				}
 			}
-			if(i==100){
+			if(i==1){
 				System.out.println("Node3 crash");
 				node3.NodeCrash();
 			}

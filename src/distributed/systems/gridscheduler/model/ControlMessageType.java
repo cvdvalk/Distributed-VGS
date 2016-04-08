@@ -30,5 +30,6 @@ public enum ControlMessageType {
 	HeartBeat,
 	HeartBeatReply,
 	Election,
-	ElectionReply
+	ElectionReply,
+	CrashNotification
 }
